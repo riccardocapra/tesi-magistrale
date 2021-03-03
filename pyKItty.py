@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import open3d
+import open3d as o3d
 
 def show_PC(disp_rgb, velo):
     i = 0
@@ -38,6 +38,8 @@ dataset = pykitti.raw(basedir, date, drive, frames=range(0, 50, 5))
 #first_gray = dataset.get_gray(0)
 #first_rgb = dataset.get_rgb(0)
 velo = dataset.get_velo(0)
+pcd = o3d.io.read_point_cloud("/home/capra/Scrivania/tesi/kitti/dataset/2011_09_26/2011_09_26_drive_0001_extract/velodyne_points/data/0000000110.txt", format='xyz')
+o3d.visualization.draw_geometries([pcd])
 
 # Do some stereo processing
 stereo = cv2.StereoBM_create()
@@ -53,8 +55,8 @@ ax2.scatter(velo[velo_range, 0],
             c=velo[velo_range, 3],
     cmap='gray')
 
-for img in dataset.rgb:        
-    disp_rgb.append(stereo.compute(
-        cv2.cvtColor(np.array(img[0]) , cv2.COLOR_RGB2GRAY),
-        cv2.cvtColor(np.array(img[1]), cv2.COLOR_RGB2GRAY)))
-show_PC(disp_rgb, velo)
+# for img in dataset.rgb:        
+#     disp_rgb.append(stereo.compute(
+#         cv2.cvtColor(np.array(img[0]) , cv2.COLOR_RGB2GRAY),
+#         cv2.cvtColor(np.array(img[1]), cv2.COLOR_RGB2GRAY)))
+# show_PC(disp_rgb, velo)
