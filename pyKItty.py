@@ -1,11 +1,25 @@
 import pykitti
-import cv2
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from mpl_toolkits.mplot3d import Axes3D
 from PIL import Image, ImageMath
 from skimage import io, transform
+
+
+class ToTensor(object):
+    """Convert ndarrays in sample to Tensors."""
+
+    def __call__(self, image):
+        # swap color axis because
+        # numpy image: H x W x C
+        # torch image: C X H X W
+        image = image.astype(float)
+        image = image.transpose((2, 0, 1))
+        torch_img = torch.from_numpy(image)
+
+        return torch_img
 
 
 def calib():
@@ -54,19 +68,22 @@ def calib():
 def data_formatter(basedir):
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
-    velo = dataset.velo_files
+    velo = dataset.velo_files[0]
+    print(velo)
+    # Le camere 2 e 3 sono quelle a colori, verificato.
     rgb_files = dataset.cam2_files
+    print(rgb_files[0])
     to_tensor = transforms.ToTensor()
-    normalization = transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                         std=[0.5, 0.5, 0.5])
+    normalization = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 
     # c=0m
     rgb = []
     rgb_img = Image.open(rgb_files[0])
-    print(rgb_img)
+    #print(rgb_img)
     rgb = to_tensor(rgb_img)
-    print(rgb.shape)
+    #print("Dimensione tensore: "+str(rgb.shape))
     rgb = normalization(rgb)
+    rgb = rgb.unsqueeze(0)
     # for img in rgb_files:
     #    rgb_img = Image.open(img)
     #    rgb_img = to_tensor(rgb_img)
@@ -74,7 +91,7 @@ def data_formatter(basedir):
     #    rgb.append(rgb_img)
     # print(c)
     # c+=1
-    return rgb, velo[0]
+    return rgb, velo
 
 
 def dataset_construction(rgb, lidar):
