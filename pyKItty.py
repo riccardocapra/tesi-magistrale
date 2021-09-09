@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from PIL import Image, ImageMath
 from skimage import io, transform
 
+
 def calib():
     print("Cam left grey:")
     f = open(basedir + "sequences/00/calib.txt", "r")
@@ -54,21 +55,26 @@ def data_formatter(basedir):
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
     velo = dataset.velo_files
-    RGB = dataset.cam0_files
+    rgb_files = dataset.cam2_files
     to_tensor = transforms.ToTensor()
     normalization = transforms.Normalize(mean=[0.5, 0.5, 0.5],
                                          std=[0.5, 0.5, 0.5])
 
-    # c=0
+    # c=0m
     rgb = []
-    for img in RGB:
-        rgb_img = Image.open(img)
-        rgb_img = to_tensor(rgb_img)
-#        rgb_img = normalization(rgb_img)
-        rgb.append(rgb_img)
-        # print(c)
-        # c+=1
-    return rgb, velo
+    rgb_img = Image.open(rgb_files[0])
+    print(rgb_img)
+    rgb = to_tensor(rgb_img)
+    print(rgb.shape)
+    rgb = normalization(rgb)
+    # for img in rgb_files:
+    #    rgb_img = Image.open(img)
+    #    rgb_img = to_tensor(rgb_img)
+    #        rgb_img = normalization(rgb_img)
+    #    rgb.append(rgb_img)
+    # print(c)
+    # c+=1
+    return rgb, velo[0]
 
 
 def dataset_construction(rgb, lidar):

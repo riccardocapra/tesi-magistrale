@@ -21,7 +21,7 @@ class RegNet(torch.nn.Module):
         self.sq = nn.Parameter(torch.Tensor([-3.0]))
 
         self.rgb_features = nn.Sequential(
-            nin_block(1, 96, kernel_size=11, strides=4, padding=0),
+            nin_block(3, 96, kernel_size=11, strides=4, padding=0),
             nn.MaxPool2d(3, stride=2),
             nin_block(96, 256, kernel_size=5, strides=1, padding=2),
             nn.MaxPool2d(3, stride=2),

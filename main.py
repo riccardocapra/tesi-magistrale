@@ -9,4 +9,4 @@ imageTensor, lidar_tensor=data_formatter(basedir)
 
 model = RegNet()
 model.train()
-model(imageTensor, lidar_tensor)
+model(imageTensor[0], lidar_tensor)
