@@ -8,4 +8,6 @@ basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
 imageTensor, lidar_tensor=data_formatter(basedir)
 model = RegNet()
 model.train()
-model(imageTensor, lidar_tensor)
+imageTensor1 = imageTensor[:,:,0:352,:]
+imageTensor2 = imageTensor[:,0,0:352,:]
+transl, rot = model(imageTensor1, imageTensor2.unsqueeze(0))

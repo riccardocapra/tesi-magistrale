@@ -8,90 +8,72 @@ from PIL import Image, ImageMath
 from skimage import io, transform
 
 
-class ToTensor(object):
-    """Convert ndarrays in sample to Tensors."""
+def get_calib(basedir):
+    dataset = pykitti.odometry(basedir, 00)
+    dataset.calib
 
-    def __call__(self, image):
-        # swap color axis because
-        # numpy image: H x W x C
-        # torch image: C X H X W
-        image = image.astype(float)
-        image = image.transpose((2, 0, 1))
-        torch_img = torch.from_numpy(image)
-
-        return torch_img
-
-
-def calib():
-    print("Cam left grey:")
+    print("Cam left color:")
     f = open(basedir + "sequences/00/calib.txt", "r")
-    Lines = f.readlines()
-    print(Lines[3])
-    cam00Param = Lines[3].split()
+    lines = f.readlines()
+    print(lines[3])
+    cam02Param = lines[3].split()
 
-    print(cam00Param[1] + " " + cam00Param[2] + " " + cam00Param[3])
-    print(cam00Param[4] + " " + cam00Param[5] + " " + cam00Param[6])
-    print(cam00Param[7] + " " + cam00Param[8] + " " + cam00Param[9])
+    print(cam02Param[1] + " " + cam02Param[2] + " " + cam02Param[3])
+    print(cam02Param[4] + " " + cam02Param[5] + " " + cam02Param[6])
+    print(cam02Param[7] + " " + cam02Param[8] + " " + cam02Param[9])
     # fx = cam00Param[1]
     # fy = cam00Param[5]
     # cx = cam00Param[3]
     # cy = cam00Param[6]
 
-    camera_matrixL = np.array([[cam00Param[1], cam00Param[2], cam00Param[3]],
-                               [cam00Param[4], cam00Param[5], cam00Param[6]],
-                               [cam00Param[1], cam00Param[8], cam00Param[9]]])
+    camera_matrixL = np.array([[cam02Param[1], cam02Param[2], cam02Param[3]],
+                               [cam02Param[4], cam02Param[5], cam02Param[6]],
+                               [cam02Param[1], cam02Param[8], cam02Param[9]]])
     f.close
 
-    print("\n Cam right grey:")
+    print("\n Cam right color:")
     f = open(basedir + "sequences/00/calib.txt", "r")
-    Lines = f.readlines()
-    print(Lines[11])
-    cam01Param = Lines[11].split()
+    lines = f.readlines()
+    print(lines[4])
+    cam03Param = lines[4].split()
 
-    print(cam01Param[1] + " " + cam01Param[2] + " " + cam01Param[3])
-    print(cam01Param[4] + " " + cam01Param[5] + " " + cam01Param[6])
-    print(cam01Param[7] + " " + cam01Param[8] + " " + cam01Param[9])
+    print(cam03Param[1] + " " + cam03Param[2] + " " + cam03Param[3])
+    print(cam03Param[4] + " " + cam03Param[5] + " " + cam03Param[6])
+    print(cam03Param[7] + " " + cam03Param[8] + " " + cam03Param[9])
     # fx = cam01Param[1]
     # fy = cam01Param[5]
     # cx = cam01Param[3]
     # cy = cam01Param[6]
 
-    camera_matrixR = np.array([[cam01Param[1], cam01Param[2], cam01Param[3]],
-                               [cam01Param[4], cam01Param[5], cam01Param[6]],
-                               [cam01Param[1], cam01Param[8], cam01Param[9]]])
+    camera_matrixR = np.array([[cam03Param[1], cam03Param[2], cam03Param[3]],
+                               [cam03Param[4], cam03Param[5], cam03Param[6]],
+                               [cam03Param[1], cam03Param[8], cam03Param[9]]])
     f.close
 
-    return
+    return camera_matrixL, camera_matrixR
 
 
 # We need to pass to regNet a rgb and a velo flow
 def data_formatter(basedir):
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
-    velo = dataset.velo_files[0]
-    print(velo)
+    depth = dataset.get_velo(0)
+    print(depth)
+    depth = torch.from_numpy(depth / (2 ** 16)).float()
     # Le camere 2 e 3 sono quelle a colori, verificato.
     rgb_files = dataset.cam2_files
-    print(rgb_files[0])
+    #print(rgb_files)
     to_tensor = transforms.ToTensor()
     normalization = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-
     # c=0m
     rgb = []
     rgb_img = Image.open(rgb_files[0])
     #print(rgb_img)
     rgb = to_tensor(rgb_img)
     #print("Dimensione tensore: "+str(rgb.shape))
-    rgb = normalization(rgb)
+    #rgb = normalization(rgb)
     rgb = rgb.unsqueeze(0)
-    # for img in rgb_files:
-    #    rgb_img = Image.open(img)
-    #    rgb_img = to_tensor(rgb_img)
-    #        rgb_img = normalization(rgb_img)
-    #    rgb.append(rgb_img)
-    # print(c)
-    # c+=1
-    return rgb, velo
+    return rgb, depth
 
 
 def dataset_construction(rgb, lidar):
