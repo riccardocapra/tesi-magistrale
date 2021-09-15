@@ -1,11 +1,29 @@
 import pykitti
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 from torchvision import transforms
-from mpl_toolkits.mplot3d import Axes3D
-from PIL import Image, ImageMath
-from skimage import io, transform
+from PIL import Image
+
+
+def data_formatter(basedir):
+    sequence = '00'
+    dataset = pykitti.odometry(basedir, sequence)
+    depth = dataset.get_velo(0)
+    # depth = torch.from_numpy(depth / (2 ** 16)).float()
+    # Le camere 2 e 3 sono quelle a colori, verificato.
+    rgb_files = dataset.cam2_files
+    # print(rgb_files)
+    to_tensor = transforms.ToTensor()
+    normalization = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    # c=0m
+    rgb = []
+    rgb_img = Image.open(rgb_files[0])
+    # print(rgb_img)
+    rgb = to_tensor(rgb_img)
+    # print("Dimensione tensore: "+str(rgb.shape))
+    # rgb = normalization(rgb)
+    rgb = rgb.unsqueeze(0)
+    return rgb, depth
 
 
 def get_calib(basedir):
@@ -54,26 +72,6 @@ def get_calib(basedir):
 
 
 # We need to pass to regNet a rgb and a velo flow
-def data_formatter(basedir):
-    sequence = '00'
-    dataset = pykitti.odometry(basedir, sequence)
-    depth = dataset.get_velo(0)
-    print(depth)
-    depth = torch.from_numpy(depth / (2 ** 16)).float()
-    # Le camere 2 e 3 sono quelle a colori, verificato.
-    rgb_files = dataset.cam2_files
-    #print(rgb_files)
-    to_tensor = transforms.ToTensor()
-    normalization = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-    # c=0m
-    rgb = []
-    rgb_img = Image.open(rgb_files[0])
-    #print(rgb_img)
-    rgb = to_tensor(rgb_img)
-    #print("Dimensione tensore: "+str(rgb.shape))
-    #rgb = normalization(rgb)
-    rgb = rgb.unsqueeze(0)
-    return rgb, depth
 
 
 def dataset_construction(rgb, lidar):
