@@ -4,16 +4,27 @@ import numpy as np
 from torchvision import transforms
 from PIL import Image
 
+def depth_rototraslation(dataset):
+    print("-- VELO_DATA FORMATTING BEGUN ---")
+    depth_array = []
+    cam2_velo = dataset.calib.T_cam2_velo
+    i=0
+    while i < len(dataset.velo_files):
+        depth = dataset.get_velo(i)[:, :3].T
+        padding_vector = np.ones(depth.shape[1])
+        depth = np.r_[depth, [padding_vector]]
+        depth = np.dot(cam2_velo, depth)
+        depth_array.append(depth)
+        print(i)
+        i+=1
+    print("-- VELO_DATA FORMATTING ENDED ---")
+    return depth_array
 
 def data_formatter(basedir):
+    print("-- DATA FORMATTING BEGUN ---")
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
-    depth = dataset.get_velo(0)[:,:3].transpose()
-    padding_vector = np.ones(depth.shape[1])
-    depth = np.r_[depth, [padding_vector]]
-    cam2_velo = dataset.calib.T_cam2_velo
-    depth = np.dot(cam2_velo, depth)
-
+    depth_array = depth_rototraslation(dataset)
     # depth = torch.from_numpy(depth / (2 ** 16)).float()
     # Le camere 2 e 3 sono quelle a colori, verificato. Mi prendo la 2.
     rgb_files = dataset.cam2_files
@@ -28,7 +39,8 @@ def data_formatter(basedir):
     # print("Dimensione tensore: "+str(rgb.shape))
     # rgb = normalization(rgb)
     rgb = rgb.unsqueeze(0)
-    return rgb, depth
+    print("-- DATA FORMATTING ENDED ---")
+    return rgb, depth_array
 
 
 # The velodyne point clouds are stored in the folder 'velodyne_points'. To
