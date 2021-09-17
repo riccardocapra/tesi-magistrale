@@ -5,7 +5,7 @@ import torch
 device = torch.device("cuda")
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-get_calib(basedir)
+data_formatter(basedir)
 imageTensor, lidar_tensor=data_formatter(basedir)
 model = RegNet()
 model.train()
