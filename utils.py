@@ -4,11 +4,12 @@ import numpy as np
 from torchvision import transforms
 from PIL import Image
 
+
 def depth_rototraslation(dataset):
     print("-- VELO_DATA FORMATTING BEGUN ---")
     depth_array = []
     cam2_velo = dataset.calib.T_cam2_velo
-    i=0
+    i = 0
     while i < len(dataset.velo_files):
         depth = dataset.get_velo(i)[:, :3].T
         padding_vector = np.ones(depth.shape[1])
@@ -16,15 +17,42 @@ def depth_rototraslation(dataset):
         depth = np.dot(cam2_velo, depth)
         depth_array.append(depth)
         print(i)
-        i+=1
+        i += 1
     print("-- VELO_DATA FORMATTING ENDED ---")
     return depth_array
+
+
+def depth_rototraslation_single(dataset):
+    print("---- VELO_IMAGE FORMATTING BEGUN ---")
+    depth_array = []
+    # cam2_velo = dataset.calib.T_cam2_velo
+    # cam2_P = dataset.calib.P_rect_20
+    # print("Cam 02 rectified matrix:")
+    # print(dataset.calib.P_rect_20)
+    depth = dataset.get_velo(0)[:, :3].T
+    padding_vector = np.ones(depth.shape[1])
+    depth = np.r_[depth, [padding_vector]]
+    # Pre-moltiplico i punti della pcl per la matrice H_init e per la P_rect dela camera 2
+    calib_matrix = np.dot(dataset.calib.P_rect_20, dataset.calib.T_cam2_velo)
+    # Una volta fatto ciò ottengo una matrice (3,n) dove n sono i punti della pcl.
+    # Ogni riga della matrice rappresenta 3 valori (u,v,w), per farla combaciare all'imamgine divitto tutto per w.
+    # Ottengo w*(x,y,1) dove x ed y sono le coordinate nel frame immagine delle profondità w.
+    # Creo una matrice di zeri (vedi paper) delle dimensioni dell'immagine
+    # Alle varie coorinate (x,y) assegno la w corrispondente
+    depth = np.dot(calib_matrix, depth)
+    depth[0] = np.divide(depth[0], depth[2])
+    depth[1] = np.divide(depth[1], depth[2])
+    print(depth.T[0])
+    # print(str(depth.T[0][0]/depth.T[0][2])+" "+str(depth.T[0][1]/depth.T[0][2])+" "+str(depth.T[0][2]/depth.T[0][2]))
+    print("---- VELO_IMAGE FORMATTING ENDED ---")
+    return depth
+
 
 def data_formatter(basedir):
     print("-- DATA FORMATTING BEGUN ---")
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
-    depth_array = depth_rototraslation(dataset)
+    depth_array = depth_rototraslation_single(dataset)
     # depth = torch.from_numpy(depth / (2 ** 16)).float()
     # Le camere 2 e 3 sono quelle a colori, verificato. Mi prendo la 2.
     rgb_files = dataset.cam2_files
