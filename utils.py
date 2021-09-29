@@ -30,7 +30,6 @@ def depth_rototraslation_single(dataset):
     # print("Cam 02 rectified matrix:")
     # print(dataset.calib.P_rect_20)
     depth = dataset.get_velo(0)[:, :3].T
-    # ???
     padding_vector = np.ones(depth.shape[1])
     depth = np.r_[depth, [padding_vector]]
     # Pre-moltiplico i punti della pcl per la matrice H_init e per la P_rect dela camera 2
@@ -41,7 +40,7 @@ def depth_rototraslation_single(dataset):
     # Creo una matrice di zeri (vedi paper) delle dimensioni dell'immagine
     # Alle varie coorinate (x,y) assegno la w corrispondente
     print("Z min: " + str(np.amin(depth[2])) + "Z max: " + str(np.amax(depth[2])))
-    #T_velo_cam2 = np.linalg.inv(dataset.calib.T_cam2_velo)
+    # T_velo_cam2 = np.linalg.inv(dataset.calib.T_cam2_velo)
 
     P_rect_20 = np.vstack([dataset.calib.P_rect_20, [0, 0, 0, 1]])
     Tr = dataset.calib.T_cam0_velo
@@ -75,7 +74,7 @@ def depth_rototraslation_single(dataset):
     zMax = np.amax(depth[2])
     depth_image = np.zeros((352, 1216))
     w, h = 352, 1216
-    for i in depth.T: #pipopipopipo
+    for i in depth.T:
         if 352 > i[0] > 0 and 1216 > i[1] > 0:
             i[2] = ((i[2] - zMin) * 255) / (zMax - zMin)
             depth_image[int(i[0]), int(i[1])] = int(i[2])
