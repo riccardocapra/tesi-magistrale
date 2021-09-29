@@ -30,18 +30,26 @@ def depth_rototraslation_single(dataset):
     # print("Cam 02 rectified matrix:")
     # print(dataset.calib.P_rect_20)
     depth = dataset.get_velo(0)[:, :3].T
+    # ???
     padding_vector = np.ones(depth.shape[1])
     depth = np.r_[depth, [padding_vector]]
     # Pre-moltiplico i punti della pcl per la matrice H_init e per la P_rect dela camera 2
-    calib_matrix = np.dot(dataset.calib.P_rect_20, np.linalg.inv(dataset.calib.T_cam2_velo))
+    # calib_matrix = np.dot(dataset.calib.P_rect_20, np.linalg.inv(dataset.calib.T_cam2_velo))
     # Una volta fatto ciò ottengo una matrice (3,n) dove n sono i punti della pcl.
-    # Ogni riga della matrice rappresenta 3 valori (u,v,w), per farla combaciare all'imamgine divitto tutto per w.
+    # Ogni riga della matrice rappresenta 3 valori (u,v,w), per farla combaciare all'imamgine divido tutto per w.
     # Ottengo w*(x,y,1) dove x ed y sono le coordinate nel frame immagine delle profondità w.
     # Creo una matrice di zeri (vedi paper) delle dimensioni dell'immagine
     # Alle varie coorinate (x,y) assegno la w corrispondente
     print("Z min: " + str(np.amin(depth[2])) + "Z max: " + str(np.amax(depth[2])))
-    depth = np.dot(dataset.calib.T_cam2_velo, depth)
-    print(dataset.calib.T_cam0_velo)
+    #T_velo_cam2 = np.linalg.inv(dataset.calib.T_cam2_velo)
+
+    P_rect_20 = np.vstack([dataset.calib.P_rect_20, [0, 0, 0, 1]])
+    Tr = dataset.calib.T_cam0_velo
+    T_cam2_velo = P_rect_20.dot(Tr)
+    T_velo_cam2 = np.linalg.inv(T_cam2_velo)
+
+    depth = T_velo_cam2.dot(depth)
+    print(dataset.calib.T_cam2_velo)
     depth[0] = depth[0] / depth[2]
     depth[1] = depth[1] / depth[2]
     c = 0
@@ -56,23 +64,22 @@ def depth_rototraslation_single(dataset):
     print("Y oob: " + str(c) + "/" + str(depth[1].shape[0]) + " il " + str(int(c / depth[1].shape[0] * 100)) + "%")
     c = 0
     for i in depth.T:
-        if i[0] > 352 or i[1] > 1216 or i[0] < 0 or i[1] < 0:
+        if i[0] > 352 or i[0] < 0 or i[1] > 1216 or i[1] < 0:
             c += 1
     print(
         "X and Y oob: " + str(c) + "/" + str(depth[0].shape[0]) + " il " + str(int(c / depth[0].shape[0] * 100)) + "%")
-    print("U oob max: " + str(np.amax(depth[0])) + " V oob max: " + str(np.amax(depth[1])))
+    print("X oob max: " + str(np.amax(depth[0])) + " Y oob max: " + str(np.amax(depth[1])))
     # print(str(depth.T[0][0]/depth.T[0][2])+" "+str(depth.T[0][1]/depth.T[0][2])+" "+str(depth.T[0][2]/depth.T[0][2]))
     print("Z max: " + str(np.amax(depth[2])) + " Z min: " + str(np.amin(depth[2])))
     zMin = np.amin(depth[2])
     zMax = np.amax(depth[2])
     depth_image = np.zeros((352, 1216))
     w, h = 352, 1216
-    for i in depth.T:
-        if i[0] < 352 and i[1] < 1216 and i[0] > 0 and i[1] > 0:
+    for i in depth.T: #pipopipopipo
+        if 352 > i[0] > 0 and 1216 > i[1] > 0:
             i[2] = ((i[2] - zMin) * 255) / (zMax - zMin)
             depth_image[int(i[0]), int(i[1])] = int(i[2])
     # print("depth_image max: " + str(np.amax(depth_image)) + " depth_image min: " + str(np.amin(depth_image)))
-
     data = np.zeros((h, w, 3), dtype=np.uint8)
     img = Image.fromarray(depth_image, 'L')
     img.save('./my.png')
