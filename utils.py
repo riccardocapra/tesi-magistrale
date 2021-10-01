@@ -42,12 +42,10 @@ def depth_rototraslation_single(dataset):
     print("Z min: " + str(np.amin(depth[2])) + "Z max: " + str(np.amax(depth[2])))
     # T_velo_cam2 = np.linalg.inv(dataset.calib.T_cam2_velo)
 
-    P_rect_20 = np.vstack([dataset.calib.P_rect_20, [0, 0, 0, 1]])
-    Tr = dataset.calib.T_cam0_velo
-    T_cam2_velo = P_rect_20.dot(Tr)
-    T_velo_cam2 = np.linalg.inv(T_cam2_velo)
+    depth = dataset.calib.T_cam2_velo.dot(depth)
+    cam2_intrinsics = dataset.calib.K_cam2
+    depth = cam2_intrinsics @ depth[:3, :]
 
-    depth = T_velo_cam2.dot(depth)
     print(dataset.calib.T_cam2_velo)
     depth[0] = depth[0] / depth[2]
     depth[1] = depth[1] / depth[2]
