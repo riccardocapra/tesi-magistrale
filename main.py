@@ -9,4 +9,4 @@ imageTensor, lidar_tensor=data_formatter(basedir)
 model = RegNet()
 model.train()
 imageTensor2 = imageTensor[:,:1,:,:]
-#transl, rot = model(imageTensor, lidar_tensor)
+# transl, rot = model(imageTensor, lidar_tensor)
