@@ -4,6 +4,7 @@ import numpy as np
 from torchvision import transforms
 from PIL import Image
 import cv2
+from datetime import datetime
 
 def depth_rototraslation(dataset):
     print("-- VELO_DATA FORMATTING BEGUN ---")
@@ -22,77 +23,68 @@ def depth_rototraslation(dataset):
     return depth_array
 
 
-def depth_rototraslation_single(dataset):
-    print("---- VELO_IMAGE FORMATTING BEGUN ---")
-    depth_array = []
-    # cam2_velo = dataset.calib.T_cam2_velo
-    # cam2_P = dataset.calib.P_rect_20
-    # print("Cam 02 rectified matrix:")
-    # print(dataset.calib.P_rect_20)
-    depth = dataset.get_velo(500).T
-    # padding_vector = np.ones(depth.shape[1])
-    # depth[3] = padding_vector
-    # Pre-moltiplico i punti della pcl per la matrice H_init e per la P_rect dela camera 2
-    # calib_matrix = np.dot(dataset.calib.P_rect_20, np.linalg.inv(dataset.calib.T_cam2_velo))
-    # Una volta fatto ciò ottengo una matrice (3,n) dove n sono i punti della pcl.
-    # Ogni riga della matrice rappresenta 3 valori (u,v,w), per farla combaciare all'imamgine divido tutto per w.
-    # Ottengo w*(x,y,1) dove x ed y sono le coordinate nel frame immagine delle profondità w.
-    # Creo una matrice di zeri (vedi paper) delle dimensioni dell'immagine
-    # Alle varie coorinate (x,y) assegno la w corrispondente
-    print("Z min: " + str(np.amin(depth[2])) + "Z max: " + str(np.amax(depth[2])))
-    # T_velo_cam2 = np.linalg.inv(dataset.calib.T_cam2_velo)
-
-    depth = dataset.calib.T_cam2_velo.dot(depth)
+def pcl_rt(depth, H, K):
+    depth = H.dot(depth)
     depth = depth.T
     depth = depth[depth[:, 2] > 0]
-
-    cam2_intrinsics = dataset.calib.K_cam2
-    depth = cam2_intrinsics @ depth[:, :3].T
+    depth = K @ depth[:, :3].T
     depth[0] = (depth[0] / depth[2]).astype(int)
     depth[1] = (depth[1] / depth[2]).astype(int)
-    # c = 0
-    # for i in depth[0]:
-    #     if i > 1216 or i < 0:
-    #         c += 1
-    # print("X oob: " + str(c) + "/" + str(depth[0].shape[0]) + " il " + str(int(c / depth[0].shape[0] * 100)) + "%")
-    # c = 0
-    # for i in depth[1]:
-    #     if i > 352 or i < 0:
-    #         c += 1
-    # print("Y oob: " + str(c) + "/" + str(depth[1].shape[0]) + " il " + str(int(c / depth[1].shape[0] * 100)) + "%")
-    # c = 0
-    # for i in depth.T:
-    #     if i[0] > 1216 or i[0] < 0 or i[1] > 352 or i[1] < 0:
-    #         c += 1
-    # print(
-    #     "X and Y oob: " + str(c) + "/" + str(depth[0].shape[0]) + " il " + str(int(c / depth[0].shape[0] * 100)) + "%")
-    # print("X oob max: " + str(np.amax(depth[0])) + " Y oob max: " + str(np.amax(depth[1])))
-    # print(str(depth.T[0][0]/depth.T[0][2])+" "+str(depth.T[0][1]/depth.T[0][2])+" "+str(depth.T[0][2]/depth.T[0][2]))
+    return depth
 
-    zMin = np.amin(depth[2])
-    zMax = np.amax(depth[2])
-    print("Z max: " + str(zMin) + " Z min: " + str(zMax))
-    depth_image = np.zeros((352, 1216))
+
+def depth_image_creation(depth, h, w):
+    depth_image = np.zeros((h, w))
+    z_max = np.amax(depth[2])
+    mask1 = depth[0] >= 0
+    mask2 = depth[0] < w
+    mask3 = depth[1] >= 0
+    mask4 = depth[1] < h
+    final_mask = mask1 * mask2 * mask3 * mask4
+    us = depth[0, final_mask]
+    vs = depth[1, final_mask]
+    zs = depth[2, final_mask]
+    for i in range(0, len(us)):
+        depth_image[int(vs[i]), int(us[i])] = (zs[i] / z_max) * 255
+    return depth_image
+
+
+def depth_rototranslation_single(dataset):
+    print("---- VELO_IMAGE FORMATTING BEGUN ---")
+
+    depth = dataset.get_velo(500).T
+    depth = pcl_rt(depth, dataset.calib.T_cam2_velo, dataset.calib.K_cam2)
     h, w = 352, 1216
-    c = 0
-
-    for i in depth.T:
-        if w > i[0] > 0 and h > i[1] > 0:
-            depth_image[int(i[1]), int(i[0])] = (i[2] / zMax) * 255
-            c += 1
-    print(c)
-    c = np.nonzero(depth_image)
-    print(c[0])
+    depth_image = depth_image_creation(depth, h, w)
     cv2.imwrite('./filename.jpeg', depth_image)
     print("---- VELO_IMAGE FORMATTING ENDED ---")
     return depth_image
+
+
+def data_formatter_pcl(dataset):
+    print("---- VELO_IMAGES FORMATTING BEGUN ---")
+    depths = dataset.velo
+    depth_images = []
+    h, w = 352, 1216
+    start_time = datetime.now()
+    for depth in depths:
+        depth = depth.T
+        depth = pcl_rt(depth, dataset.calib.T_cam2_velo, dataset.calib.K_cam2)
+        depth_image = depth_image_creation(depth, h, w)
+        depth_images.append(depth_image)
+    end_time = datetime.now()
+    end_time = end_time - start_time
+    print("---- Secondi passati: "+str(end_time.total_seconds()))
+    cv2.imwrite('./filename.jpeg', depth_images[0])
+    print("---- VELO_IMAGES FORMATTING ENDED ---")
+    return depth_images
 
 
 def data_formatter(basedir):
     print("-- DATA FORMATTING BEGUN ---")
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
-    depth_array = depth_rototraslation_single(dataset)
+    depth_array = data_formatter_pcl(dataset)
     # depth = torch.from_numpy(depth / (2 ** 16)).float()
     # Le camere 2 e 3 sono quelle a colori, verificato. Mi prendo la 2.
     rgb_files = dataset.cam2_files
