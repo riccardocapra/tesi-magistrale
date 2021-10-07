@@ -58,14 +58,17 @@ def depth_rototranslation_single(dataset):
     depth_image = depth_image_creation(depth, h, w)
     cv2.imwrite('./filename.jpeg', depth_image)
     print("---- VELO_IMAGE FORMATTING ENDED ---")
-    return depth_image
+    to_tensor = transforms.ToTensor()
+    depth_image_tensor = to_tensor(depth_image)
+    depth_image_tensor = depth_image_tensor.unsqueeze(0)
+    return depth_image_tensor.float()
 
 
 def data_formatter_pcl(dataset):
     print("---- VELO_IMAGES FORMATTING BEGUN ---")
     depths = dataset.velo
     depth_images = []
-    h, w = 352, 1216
+    h, w = 352, 1241
     start_time = datetime.now()
     for depth in depths:
         depth = depth.T
@@ -84,7 +87,8 @@ def data_formatter(basedir):
     print("-- DATA FORMATTING BEGUN ---")
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
-    depth_array = data_formatter_pcl(dataset)
+    # depth_array = data_formatter_pcl(dataset)
+    depth_array = depth_rototranslation_single(dataset)
     # depth = torch.from_numpy(depth / (2 ** 16)).float()
     # Le camere 2 e 3 sono quelle a colori, verificato. Mi prendo la 2.
     rgb_files = dataset.cam2_files
@@ -92,7 +96,7 @@ def data_formatter(basedir):
     to_tensor = transforms.ToTensor()
     normalization = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     # c=0m
-    rgb = []
+    # rgb = []
     rgb_img = Image.open(rgb_files[0])
     # print(rgb_img)
     rgb = to_tensor(rgb_img)
@@ -100,7 +104,7 @@ def data_formatter(basedir):
     # rgb = normalization(rgb)
     rgb = rgb.unsqueeze(0)
     print("-- DATA FORMATTING ENDED ---")
-    return rgb, depth_array
+    return rgb.float(), depth_array
 
 
 # The velodyne point clouds are stored in the folder 'velodyne_points'. To
