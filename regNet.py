@@ -71,7 +71,7 @@ class RegNet(torch.nn.Module):
         img_data = F.max_pool2d(self.rgb_features_n1(img_data), 3, 2)
         img_data = F.max_pool2d(self.rgb_features_n2(img_data), 3, 2)
         img_data = F.max_pool2d(self.rgb_features_n3(img_data), 3, 2, 1)
-        #Lidar branch
+        # Lidar branch
         lidar_data = F.max_pool2d(self.refl_features_n1(lidar_data), 3, 2, 1)
         lidar_data = F.max_pool2d(self.refl_features_n2(lidar_data), 3, 2, 1)
         lidar_data = F.max_pool2d(self.refl_features_n3(lidar_data), 3, 2, 1)

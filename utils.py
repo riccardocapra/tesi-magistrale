@@ -6,6 +6,12 @@ from PIL import Image
 import cv2
 from datetime import datetime
 
+
+def perturbation(H_init, p_factor):
+    H_init[:3, 3] += p_factor
+    return H_init
+
+
 def depth_rototraslation(dataset):
     print("-- VELO_DATA FORMATTING BEGUN ---")
     depth_array = []
@@ -51,12 +57,15 @@ def depth_image_creation(depth, h, w):
 
 def depth_rototranslation_single(dataset):
     print("---- VELO_IMAGE FORMATTING BEGUN ---")
-
     depth = dataset.get_velo(500).T
+    h_init = perturbation(dataset.calib.T_cam2_velo, 1)
+    depth_p = pcl_rt(depth, h_init, dataset.calib.K_cam2)
     depth = pcl_rt(depth, dataset.calib.T_cam2_velo, dataset.calib.K_cam2)
     h, w = 352, 1216
     depth_image = depth_image_creation(depth, h, w)
-    cv2.imwrite('./filename.jpeg', depth_image)
+    depth_image_p = depth_image_creation(depth_p, h, w)
+    cv2.imwrite('Original.jpeg', depth_image)
+    cv2.imwrite('Perturbated.jpeg', depth_image_p)
     print("---- VELO_IMAGE FORMATTING ENDED ---")
     to_tensor = transforms.ToTensor()
     depth_image_tensor = to_tensor(depth_image)
@@ -68,7 +77,7 @@ def data_formatter_pcl(dataset):
     print("---- VELO_IMAGES FORMATTING BEGUN ---")
     depths = dataset.velo
     depth_images = []
-    h, w = 352, 1241
+    h, w = 352, 1216
     start_time = datetime.now()
     for depth in depths:
         depth = depth.T
@@ -78,7 +87,7 @@ def data_formatter_pcl(dataset):
     end_time = datetime.now()
     end_time = end_time - start_time
     print("---- Secondi passati: "+str(end_time.total_seconds()))
-    cv2.imwrite('./filename.jpeg', depth_images[0])
+    cv2.imwrite('filename.jpeg', depth_images[0])
     print("---- VELO_IMAGES FORMATTING ENDED ---")
     return depth_images
 
