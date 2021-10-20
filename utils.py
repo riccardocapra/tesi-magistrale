@@ -1,3 +1,4 @@
+import math
 import pykitti
 import torch
 import numpy as np
@@ -5,10 +6,73 @@ from torchvision import transforms
 from PIL import Image
 import cv2
 from datetime import datetime
-
+from scipy.spatial.transform import Rotation as R
 
 def perturbation(H_init, p_factor):
-    H_init[:3, 3] += p_factor
+    # H_init[:2, 3] += p_factor
+    # extract roll, pitch and yaw
+    h_mat = R.from_matrix(H_init[:3,:3])
+    rpy = h_mat.as_euler('zyx', degrees=True)
+    print(rpy)
+    r = R.from_euler('zyx',rpy)
+    print(r.as_matrix())
+    yaw = math.atan(H_init[1, 0] / H_init[0, 0])
+    pitch = math.atan(-H_init[2, 0] / (math.sqrt((H_init[2, 1] ** 2) + (H_init[2, 2] ** 2))))
+    roll = math.atan(H_init[2, 1] / H_init[2, 2])
+    # roll = math.atan2(-H_init[1, 2], H_init[2, 2])
+    # pitch = math.asin(H_init[0, 2])
+    # yaw = math.atan2(-H_init[0, 1], H_init[0, 0])
+    print("H_init:")
+    print(H_init)
+    print("roll= " + str(roll))
+    print("pitch= " + str(pitch))
+    print("yaw= " + str(yaw))
+    # print("roll_m= " + str(roll_m))
+    # print("pitch_m= " + str(pitch_m))
+    # print("yaw_m= " + str(yaw_m))
+    roll_matrix = np.array([[1, 0, 0],
+                            [0, math.cos(roll), -math.sin(roll)],
+                            [0, math.sin(roll), math.cos(roll)]])
+
+    pitch_matrix = np.array([[math.cos(pitch), 0, math.sin(pitch)],
+                             [0, 1, 0],
+                             [-math.sin(pitch), 0, math.cos(pitch)]])
+
+    yaw_matrix = np.array([[math.cos(yaw), -math.sin(yaw), 0],
+                           [math.sin(yaw), math.cos(yaw), 0],
+                           [0, 0, 1]])
+    # rotation_matrix_m = np.array([[math.cos(yaw)*math.cos(pitch), math.cos(yaw)*math.sin(pitch)*math.sin(roll)-math.sin(yaw)*math.cos(roll), math.cos(yaw)*math.sin(pitch)*math.cos(roll)+math.sin(yaw)*math.sin(roll)],
+    #                         [math.sin(yaw)*math.cos(pitch), math.sin(yaw)*math.sin(pitch)*math.sin(roll)+math.cos(yaw)*math.cos(roll), math.sin(yaw)*math.sin(pitch)*math.cos(roll)-math.cos(yaw)*math.sin(roll)],
+    #                         [-math.sin(pitch), math.cos(pitch)*math.sin(roll), math.cos(pitch)*math.cos(roll)]])
+
+    rotation_matrix = yaw_matrix.dot(pitch_matrix.dot(roll_matrix))
+
+    print("rotation_matrix:")
+    print(rotation_matrix)
+
+    yaw = math.atan(rotation_matrix[1, 0] / rotation_matrix[0, 0])
+    pitch = math.atan(-rotation_matrix[2, 0] / (math.sqrt((rotation_matrix[2, 1] ** 2) + (rotation_matrix[2, 2] ** 2))))
+    roll = math.atan(rotation_matrix[2, 1] / rotation_matrix[2, 2])
+    print("roll2= " + str(roll))
+    print("pitch2= " + str(pitch))
+    print("yaw2= " + str(yaw))
+    roll_matrix = np.array([[1, 0, 0],
+                            [0, math.cos(roll), -math.sin(roll)],
+                            [0, math.sin(roll), math.cos(roll)]])
+
+    pitch_matrix = np.array([[math.cos(pitch), 0, math.sin(pitch)],
+                             [0, 1, 0],
+                             [-math.sin(pitch), 0, math.cos(pitch)]])
+
+    yaw_matrix = np.array([[math.cos(yaw), -math.sin(yaw), 0],
+                           [math.sin(yaw), math.cos(yaw), 0],
+                           [0, 0, 1]])
+    rotation_matrix = yaw_matrix.dot(pitch_matrix.dot(roll_matrix))
+    print("rotation_matrix2:")
+    print(rotation_matrix)
+
+
+
     return H_init
 
 
@@ -86,7 +150,7 @@ def data_formatter_pcl(dataset):
         depth_images.append(depth_image)
     end_time = datetime.now()
     end_time = end_time - start_time
-    print("---- Secondi passati: "+str(end_time.total_seconds()))
+    print("---- Secondi passati: " + str(end_time.total_seconds()))
     cv2.imwrite('filename.jpeg', depth_images[0])
     print("---- VELO_IMAGES FORMATTING ENDED ---")
     return depth_images
@@ -132,42 +196,11 @@ def get_calib(basedir):
     print("Cam left color:")
     f = open(basedir + "sequences/00/calib.txt", "r")
     lines = f.readlines()
-    print(lines[3])
-    cam02Param = lines[3].split()
-
-    print(cam02Param[1] + " " + cam02Param[2] + " " + cam02Param[3])
-    print(cam02Param[4] + " " + cam02Param[5] + " " + cam02Param[6])
-    print(cam02Param[7] + " " + cam02Param[8] + " " + cam02Param[9])
-    # fx = cam00Param[1]
-    # fy = cam00Param[5]
-    # cx = cam00Param[3]
-    # cy = cam00Param[6]
-
-    camera_matrixL = np.array([[cam02Param[1], cam02Param[2], cam02Param[3]],
-                               [cam02Param[4], cam02Param[5], cam02Param[6]],
-                               [cam02Param[1], cam02Param[8], cam02Param[9]]])
+    for l in lines:
+        print(l)
     f.close
 
-    print("\n Cam right color:")
-    f = open(basedir + "sequences/" + sequence + "/calib.txt", "r")
-    lines = f.readlines()
-    print(lines[4])
-    cam03Param = lines[4].split()
-
-    print(cam03Param[1] + " " + cam03Param[2] + " " + cam03Param[3])
-    print(cam03Param[4] + " " + cam03Param[5] + " " + cam03Param[6])
-    print(cam03Param[7] + " " + cam03Param[8] + " " + cam03Param[9])
-    # fx = cam01Param[1]
-    # fy = cam01Param[5]
-    # cx = cam01Param[3]
-    # cy = cam01Param[6]
-
-    camera_matrixR = np.array([[cam03Param[1], cam03Param[2], cam03Param[3]],
-                               [cam03Param[4], cam03Param[5], cam03Param[6]],
-                               [cam03Param[1], cam03Param[8], cam03Param[9]]])
-    f.close
-
-    return camera_matrixL, camera_matrixR
+    return
 
 
 # We need to pass to regNet a rgb and a velo flow
