@@ -8,72 +8,22 @@ import cv2
 from datetime import datetime
 from scipy.spatial.transform import Rotation as R
 
-def perturbation(H_init, p_factor):
+
+def perturbation(h_init, p_factor):
+    new_h_init = np.copy(h_init)
     # H_init[:2, 3] += p_factor
     # extract roll, pitch and yaw
-    h_mat = R.from_matrix(H_init[:3,:3])
-    rpy = h_mat.as_euler('zyx', degrees=True)
-    print(rpy)
-    r = R.from_euler('zyx',rpy)
-    print(r.as_matrix())
-    yaw = math.atan(H_init[1, 0] / H_init[0, 0])
-    pitch = math.atan(-H_init[2, 0] / (math.sqrt((H_init[2, 1] ** 2) + (H_init[2, 2] ** 2))))
-    roll = math.atan(H_init[2, 1] / H_init[2, 2])
-    # roll = math.atan2(-H_init[1, 2], H_init[2, 2])
-    # pitch = math.asin(H_init[0, 2])
-    # yaw = math.atan2(-H_init[0, 1], H_init[0, 0])
-    print("H_init:")
-    print(H_init)
-    print("roll= " + str(roll))
-    print("pitch= " + str(pitch))
-    print("yaw= " + str(yaw))
-    # print("roll_m= " + str(roll_m))
-    # print("pitch_m= " + str(pitch_m))
-    # print("yaw_m= " + str(yaw_m))
-    roll_matrix = np.array([[1, 0, 0],
-                            [0, math.cos(roll), -math.sin(roll)],
-                            [0, math.sin(roll), math.cos(roll)]])
-
-    pitch_matrix = np.array([[math.cos(pitch), 0, math.sin(pitch)],
-                             [0, 1, 0],
-                             [-math.sin(pitch), 0, math.cos(pitch)]])
-
-    yaw_matrix = np.array([[math.cos(yaw), -math.sin(yaw), 0],
-                           [math.sin(yaw), math.cos(yaw), 0],
-                           [0, 0, 1]])
-    # rotation_matrix_m = np.array([[math.cos(yaw)*math.cos(pitch), math.cos(yaw)*math.sin(pitch)*math.sin(roll)-math.sin(yaw)*math.cos(roll), math.cos(yaw)*math.sin(pitch)*math.cos(roll)+math.sin(yaw)*math.sin(roll)],
-    #                         [math.sin(yaw)*math.cos(pitch), math.sin(yaw)*math.sin(pitch)*math.sin(roll)+math.cos(yaw)*math.cos(roll), math.sin(yaw)*math.sin(pitch)*math.cos(roll)-math.cos(yaw)*math.sin(roll)],
-    #                         [-math.sin(pitch), math.cos(pitch)*math.sin(roll), math.cos(pitch)*math.cos(roll)]])
-
-    rotation_matrix = yaw_matrix.dot(pitch_matrix.dot(roll_matrix))
-
-    print("rotation_matrix:")
-    print(rotation_matrix)
-
-    yaw = math.atan(rotation_matrix[1, 0] / rotation_matrix[0, 0])
-    pitch = math.atan(-rotation_matrix[2, 0] / (math.sqrt((rotation_matrix[2, 1] ** 2) + (rotation_matrix[2, 2] ** 2))))
-    roll = math.atan(rotation_matrix[2, 1] / rotation_matrix[2, 2])
-    print("roll2= " + str(roll))
-    print("pitch2= " + str(pitch))
-    print("yaw2= " + str(yaw))
-    roll_matrix = np.array([[1, 0, 0],
-                            [0, math.cos(roll), -math.sin(roll)],
-                            [0, math.sin(roll), math.cos(roll)]])
-
-    pitch_matrix = np.array([[math.cos(pitch), 0, math.sin(pitch)],
-                             [0, 1, 0],
-                             [-math.sin(pitch), 0, math.cos(pitch)]])
-
-    yaw_matrix = np.array([[math.cos(yaw), -math.sin(yaw), 0],
-                           [math.sin(yaw), math.cos(yaw), 0],
-                           [0, 0, 1]])
-    rotation_matrix = yaw_matrix.dot(pitch_matrix.dot(roll_matrix))
-    print("rotation_matrix2:")
-    print(rotation_matrix)
-
-
-
-    return H_init
+    h_mat = R.from_matrix(new_h_init[:3, :3])
+    quat_rot = h_mat.as_quat()
+    print(quat_rot)
+    r_euler = R.from_quat(quat_rot).as_matrix()
+    print(r_euler)
+    # rotation_array = np.array([0, 0, 0])
+    # r = R.from_rotvec(r.apply(rotation_array))
+    print(new_h_init)
+    new_h_init[:3,:3] = r_euler
+    print(new_h_init)
+    return new_h_init
 
 
 def depth_rototraslation(dataset):
@@ -93,8 +43,8 @@ def depth_rototraslation(dataset):
     return depth_array
 
 
-def pcl_rt(depth, H, K):
-    depth = H.dot(depth)
+def pcl_rt(depth_pts, H, K):
+    depth = H.dot(depth_pts)
     depth = depth.T
     depth = depth[depth[:, 2] > 0]
     depth = K @ depth[:, :3].T
@@ -122,14 +72,17 @@ def depth_image_creation(depth, h, w):
 def depth_rototranslation_single(dataset):
     print("---- VELO_IMAGE FORMATTING BEGUN ---")
     depth = dataset.get_velo(500).T
-    h_init = perturbation(dataset.calib.T_cam2_velo, 1)
-    depth_p = pcl_rt(depth, h_init, dataset.calib.K_cam2)
-    depth = pcl_rt(depth, dataset.calib.T_cam2_velo, dataset.calib.K_cam2)
+    h_init = np.copy(dataset.calib.T_cam2_velo)
+    depth_n = pcl_rt(depth, h_init, dataset.calib.K_cam2)
     h, w = 352, 1216
-    depth_image = depth_image_creation(depth, h, w)
-    depth_image_p = depth_image_creation(depth_p, h, w)
+    depth_image = depth_image_creation(depth_n, h, w)
     cv2.imwrite('Original.jpeg', depth_image)
+
+    new_h_init = perturbation(h_init, 1)
+    depth_p = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
+    depth_image_p = depth_image_creation(depth_p, h, w)
     cv2.imwrite('Perturbated.jpeg', depth_image_p)
+
     print("---- VELO_IMAGE FORMATTING ENDED ---")
     to_tensor = transforms.ToTensor()
     depth_image_tensor = to_tensor(depth_image)
