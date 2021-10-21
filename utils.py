@@ -11,18 +11,31 @@ from scipy.spatial.transform import Rotation as R
 
 def perturbation(h_init, p_factor):
     new_h_init = np.copy(h_init)
+    print("Rotazione matrice originale:")
+    print(new_h_init[:3, :3])
     # H_init[:2, 3] += p_factor
     # extract roll, pitch and yaw
     h_mat = R.from_matrix(new_h_init[:3, :3])
     quat_rot = h_mat.as_quat()
+    print("Quaternioni originali:")
     print(quat_rot)
-    r_euler = R.from_quat(quat_rot).as_matrix()
-    print(r_euler)
-    # rotation_array = np.array([0, 0, 0])
+
+    quat_rot_matrix = R.from_quat(quat_rot).as_matrix()
+    print("Matrice che genererebbe quei quaternioni:")
+    print(quat_rot_matrix)
+
+    rotation_array = R.from_euler('zyx', [0, 0, 45], degrees=True)
+    h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
+    quat_rot = h_mat.as_quat()
+    print("Quaternioni della matrice che ruoterà H:")
+    print(quat_rot)
+
+    print("h_mat ruotata:")
+    print(h_mat.as_matrix())
     # r = R.from_rotvec(r.apply(rotation_array))
-    print(new_h_init)
-    new_h_init[:3,:3] = r_euler
-    print(new_h_init)
+    new_h_init[:3, :3] = h_mat.as_matrix()
+    print("Rotazione della nuova matrice H che la fz ritorna:")
+    print(new_h_init[:3, :3])
     return new_h_init
 
 
