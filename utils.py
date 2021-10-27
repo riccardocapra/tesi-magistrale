@@ -9,53 +9,6 @@ from datetime import datetime
 from scipy.spatial.transform import Rotation as R
 
 
-def perturbation(h_init, p_factor):
-    new_h_init = np.copy(h_init)
-    print("Rotazione matrice originale:")
-    print(new_h_init[:3, :3])
-    # H_init[:2, 3] += p_factor
-    # extract roll, pitch and yaw
-    h_mat = R.from_matrix(new_h_init[:3, :3])
-    quat_rot = h_mat.as_quat()
-    print("Quaternioni originali:")
-    print(quat_rot)
-
-    quat_rot_matrix = R.from_quat(quat_rot).as_matrix()
-    print("Matrice che genererebbe quei quaternioni:")
-    print(quat_rot_matrix)
-
-    rotation_array = R.from_euler('zyx', [0, 0, 45], degrees=True)
-    h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
-    quat_rot = h_mat.as_quat()
-    print("Quaternioni della matrice che ruoterà H:")
-    print(quat_rot)
-
-    print("h_mat ruotata:")
-    print(h_mat.as_matrix())
-    # r = R.from_rotvec(r.apply(rotation_array))
-    new_h_init[:3, :3] = h_mat.as_matrix()
-    print("Rotazione della nuova matrice H che la fz ritorna:")
-    print(new_h_init[:3, :3])
-    return new_h_init
-
-
-def depth_rototraslation(dataset):
-    print("-- VELO_DATA FORMATTING BEGUN ---")
-    depth_array = []
-    cam2_velo = dataset.calib.T_cam2_velo
-    i = 0
-    while i < len(dataset.velo_files):
-        depth = dataset.get_velo(i)[:, :3].T
-        padding_vector = np.ones(depth.shape[1])
-        depth = np.r_[depth, [padding_vector]]
-        depth = np.dot(cam2_velo, depth)
-        depth_array.append(depth)
-        print(i)
-        i += 1
-    print("-- VELO_DATA FORMATTING ENDED ---")
-    return depth_array
-
-
 def pcl_rt(depth_pts, H, K):
     depth = H.dot(depth_pts)
     depth = depth.T
@@ -82,7 +35,37 @@ def depth_image_creation(depth, h, w):
     return depth_image
 
 
-def depth_rototranslation_single(dataset):
+def perturbation(h_init, p_factor):
+    new_h_init = np.copy(h_init)
+    # print("Rotazione matrice originale:")
+    # print(new_h_init[:3, :3])
+    # H_init[:2, 3] += p_factor
+    # extract roll, pitch and yaw
+    # h_mat = R.from_matrix(new_h_init[:3, :3])
+    # quat_rot = h_mat.as_quat()
+    # print("Quaternioni originali:")
+    # print(quat_rot)
+
+    # quat_rot_matrix = R.from_quat(quat_rot).as_matrix()
+    # print("Matrice che genererebbe quei quaternioni:")
+    # print(quat_rot_matrix)
+
+    rotation_array = R.from_euler('zyx', p_factor, degrees=True)
+    h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
+    # quat_rot = h_mat.as_quat()
+    # print("Quaternioni della matrice che ruoterà H:")
+    # print(quat_rot)
+
+    # print("h_mat ruotata:")
+    # print(h_mat.as_matrix())
+    # r = R.from_rotvec(r.apply(rotation_array))
+    new_h_init[:3, :3] = h_mat.as_matrix()
+    # print("Rotazione della nuova matrice H che la fz ritorna:")
+    # print(new_h_init[:3, :3])
+    return new_h_init
+
+
+def depth_rototraslation_single(dataset):
     print("---- VELO_IMAGE FORMATTING BEGUN ---")
     depth = dataset.get_velo(500).T
     h_init = np.copy(dataset.calib.T_cam2_velo)
@@ -90,8 +73,8 @@ def depth_rototranslation_single(dataset):
     h, w = 352, 1216
     depth_image = depth_image_creation(depth_n, h, w)
     cv2.imwrite('Original.jpeg', depth_image)
-
-    new_h_init = perturbation(h_init, 1)
+    perturbation_vector = [0, 0, 45]
+    new_h_init = perturbation(h_init, perturbation_vector)
     depth_p = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
     depth_image_p = depth_image_creation(depth_p, h, w)
     cv2.imwrite('Perturbated.jpeg', depth_image_p)
@@ -111,13 +94,15 @@ def data_formatter_pcl(dataset):
     start_time = datetime.now()
     for depth in depths:
         depth = depth.T
-        depth = pcl_rt(depth, dataset.calib.T_cam2_velo, dataset.calib.K_cam2)
+        perturbation_vector = [0, 0, 45]
+        new_h_init = perturbation(dataset.calib.T_cam2_velo, perturbation_vector)
+        depth = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
         depth_image = depth_image_creation(depth, h, w)
         depth_images.append(depth_image)
     end_time = datetime.now()
     end_time = end_time - start_time
     print("---- Secondi passati: " + str(end_time.total_seconds()))
-    cv2.imwrite('filename.jpeg', depth_images[0])
+    cv2.imwrite('perturbated_first.jpeg', depth_images[0])
     print("---- VELO_IMAGES FORMATTING ENDED ---")
     return depth_images
 
@@ -127,7 +112,7 @@ def data_formatter(basedir):
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
     # depth_array = data_formatter_pcl(dataset)
-    depth_array = depth_rototranslation_single(dataset)
+    depth_array = data_formatter_pcl(dataset)
     # depth = torch.from_numpy(depth / (2 ** 16)).float()
     # Le camere 2 e 3 sono quelle a colori, verificato. Mi prendo la 2.
     rgb_files = dataset.cam2_files
@@ -144,6 +129,23 @@ def data_formatter(basedir):
     rgb = rgb.unsqueeze(0)
     print("-- DATA FORMATTING ENDED ---")
     return rgb.float(), depth_array
+
+
+# def depth_rototraslation(dataset):
+#     print("-- VELO_DATA FORMATTING BEGUN ---")
+#     depth_array = []
+#     cam2_velo = dataset.calib.T_cam2_velo
+#     i = 0
+#     while i < len(dataset.velo_files):
+#         depth = dataset.get_velo(i)[:, :3].T
+#         padding_vector = np.ones(depth.shape[1])
+#         depth = np.r_[depth, [padding_vector]]
+#         depth = np.dot(cam2_velo, depth)
+#         depth_array.append(depth)
+#         # print(i)
+#         i += 1
+#     print("-- VELO_DATA FORMATTING ENDED ---")
+#     return depth_array
 
 
 # The velodyne point clouds are stored in the folder 'velodyne_points'. To
