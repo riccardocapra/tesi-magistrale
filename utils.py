@@ -1,16 +1,20 @@
-import math
 import pykitti
-import torch
 import numpy as np
+import torch
 from torchvision import transforms
 from PIL import Image
 import cv2
 from datetime import datetime
 from scipy.spatial.transform import Rotation as R
+import cupy
+import multiprocessing
+from os import getpid
 
 
 def pcl_rt(depth_pts, H, K):
-    depth = H.dot(depth_pts)
+    cupy.cuda.Device(2)
+    # depth = H.dot(depth_pts)
+    depth = cupy.dot(H, depth_pts)
     depth = depth.T
     depth = depth[depth[:, 2] > 0]
     depth = K @ depth[:, :3].T
@@ -20,6 +24,7 @@ def pcl_rt(depth_pts, H, K):
 
 
 def depth_image_creation(depth, h, w):
+    cupy.cuda.Device(2)
     depth_image = np.zeros((h, w))
     z_max = np.amax(depth[2])
     mask1 = depth[0] >= 0
@@ -36,6 +41,7 @@ def depth_image_creation(depth, h, w):
 
 
 def perturbation(h_init, p_factor):
+    cupy.cuda.Device(2)
     new_h_init = np.copy(h_init)
     # print("Rotazione matrice originale:")
     # print(new_h_init[:3, :3])
@@ -51,7 +57,8 @@ def perturbation(h_init, p_factor):
     # print(quat_rot_matrix)
 
     rotation_array = R.from_euler('zyx', p_factor, degrees=True)
-    h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
+    # h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
+    h_mat = R.from_matrix(cupy.dot(new_h_init[:3, :3], rotation_array.as_matrix()))
     # quat_rot = h_mat.as_quat()
     # print("Quaternioni della matrice che ruoterà H:")
     # print(quat_rot)
@@ -65,19 +72,20 @@ def perturbation(h_init, p_factor):
     return new_h_init
 
 
-def depth_rototraslation_single(dataset):
-    print("---- VELO_IMAGE FORMATTING BEGUN ---")
-    depth = dataset.get_velo(500).T
+def data_formatter_pcl_single(dataset, idx):
+    cupy.cuda.Device(2)
+    print("---- VELO_IMAGE "+idx+" FORMATTING BEGUN ---")
+    depth = dataset.get_velo(idx).T
     h_init = np.copy(dataset.calib.T_cam2_velo)
     depth_n = pcl_rt(depth, h_init, dataset.calib.K_cam2)
     h, w = 352, 1216
     depth_image = depth_image_creation(depth_n, h, w)
-    cv2.imwrite('Original.jpeg', depth_image)
+    # cv2.imwrite('Original.jpeg', depth_image)
     perturbation_vector = [0, 0, 45]
     new_h_init = perturbation(h_init, perturbation_vector)
     depth_p = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
-    depth_image_p = depth_image_creation(depth_p, h, w)
-    cv2.imwrite('Perturbated.jpeg', depth_image_p)
+    # depth_image_p = depth_image_creation(depth_p, h, w)
+    # cv2.imwrite('Perturbated.jpeg', depth_image_p)
 
     print("---- VELO_IMAGE FORMATTING ENDED ---")
     to_tensor = transforms.ToTensor()
@@ -86,30 +94,59 @@ def depth_rototraslation_single(dataset):
     return depth_image_tensor.float()
 
 
+def depth_tensor_creation(depth):
+    # print("point cloud", c, " in esecuzione.")
+    h, w = 352, 1216
+    to_tensor = transforms.ToTensor()
+    depth = depth.T
+    perturbation_vector = [0, 0, 45]
+    new_h_init = perturbation(dataset.calib.T_cam2_velo, perturbation_vector)
+    depth = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
+    depth_image = depth_image_creation(depth, h, w)
+    depth_image_tensor = to_tensor(depth_image)
+    # depth_images_tensor.append(depth_image_tensor)
+    # c+=1
+    return depth_image_tensor
+
+
+def scan_loader(file):
+    scan = np.fromfile(file, dtype=np.float32)
+    scan = scan.reshape((-1, 4))
+    return scan
+
+
 def data_formatter_pcl(dataset):
     print("---- VELO_IMAGES FORMATTING BEGUN ---")
-    depths = dataset.velo
-    depth_images = []
-    h, w = 352, 1216
+    velo_files = dataset.velo_files[:50]
     start_time = datetime.now()
-    for depth in depths:
-        depth = depth.T
-        perturbation_vector = [0, 0, 45]
-        new_h_init = perturbation(dataset.calib.T_cam2_velo, perturbation_vector)
-        depth = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
-        depth_image = depth_image_creation(depth, h, w)
-        depth_images.append(depth_image)
+    with multiprocessing.Pool(12) as p:
+        depths = p.map(scan_loader, velo_files)
+    # scan = np.fromfile(velo_files, dtype=np.float32)
+    # scan.reshape((-1, 4))
+    end_time = datetime.now()
+    end_time = end_time - start_time
+    print("---- Secondi passati per conversione lista: " + str(end_time.total_seconds()))
+
+    depth_images_tensor = []
+    start_time = datetime.now()
+    # c = 1
+    with multiprocessing.Pool(12) as p:
+        depth_images_tensor = depth_images_tensor.append(p.map(depth_tensor_creation, depths))
+
     end_time = datetime.now()
     end_time = end_time - start_time
     print("---- Secondi passati: " + str(end_time.total_seconds()))
-    cv2.imwrite('perturbated_first.jpeg', depth_images[0])
     print("---- VELO_IMAGES FORMATTING ENDED ---")
-    return depth_images
+    return depth_images_tensor
+
+
+dataset = []
 
 
 def data_formatter(basedir):
     print("-- DATA FORMATTING BEGUN ---")
     sequence = '00'
+    global dataset
     dataset = pykitti.odometry(basedir, sequence)
     # depth_array = data_formatter_pcl(dataset)
     depth_array = data_formatter_pcl(dataset)
@@ -131,23 +168,6 @@ def data_formatter(basedir):
     return rgb.float(), depth_array
 
 
-# def depth_rototraslation(dataset):
-#     print("-- VELO_DATA FORMATTING BEGUN ---")
-#     depth_array = []
-#     cam2_velo = dataset.calib.T_cam2_velo
-#     i = 0
-#     while i < len(dataset.velo_files):
-#         depth = dataset.get_velo(i)[:, :3].T
-#         padding_vector = np.ones(depth.shape[1])
-#         depth = np.r_[depth, [padding_vector]]
-#         depth = np.dot(cam2_velo, depth)
-#         depth_array.append(depth)
-#         # print(i)
-#         i += 1
-#     print("-- VELO_DATA FORMATTING ENDED ---")
-#     return depth_array
-
-
 # The velodyne point clouds are stored in the folder 'velodyne_points'. To
 # save space, all scans have been stored as Nx4 float matrix into a binary
 # file.
@@ -158,6 +178,7 @@ def data_formatter(basedir):
 
 
 def get_calib(basedir):
+    cupy.cuda.Device(2)
     sequence = '00'
     dataset = pykitti.odometry(basedir, sequence)
     print(dataset.calib.T_cam2_velo)

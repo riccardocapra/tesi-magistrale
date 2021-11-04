@@ -2,7 +2,7 @@ from regNet import RegNet
 from utils import data_formatter, perturbation
 import torch
 
-device = torch.device("cuda")
+device = torch.device("cuda:2")
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
 imageTensor, lidar_tensor = data_formatter(basedir)
