@@ -14,7 +14,7 @@ import pykitti
 class RegnetDataset(Dataset):
     """RegNet dataset."""
 
-    def __init__(self, dataset_dir, sequence, pose_type, seed=None, transform=None):
+    def __init__(self, dataset_dir, sequence, pose_type=None, seed=None, transform=None):
 
         """
 
@@ -33,7 +33,7 @@ class RegnetDataset(Dataset):
         # self.pose_type = pose_type
         # self.transform = transform
 
-    def custom_transform(self, rgb):
+    def custom_transform(rgb):
 
         # Tenere img size originale
         # resize = transforms.Resize((352, 1216))
@@ -52,7 +52,7 @@ class RegnetDataset(Dataset):
         return rgb
 
     def __len__(self):
-        return len(self.csv_file)
+        return len(self.dataset.velo_files)
 
     def __getitem__(self, idx):
 
