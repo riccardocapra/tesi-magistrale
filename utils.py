@@ -74,7 +74,7 @@ def perturbation(h_init, p_factor):
 
 def data_formatter_pcl_single(dataset, idx):
     cupy.cuda.Device(2)
-    print("---- VELO_IMAGE "+idx+" FORMATTING BEGUN ---")
+    print("---- VELO_IMAGE "+str(idx)+" FORMATTING BEGUN ---")
     depth = dataset.get_velo(idx).T
     h_init = np.copy(dataset.calib.T_cam2_velo)
     depth_n = pcl_rt(depth, h_init, dataset.calib.K_cam2)
