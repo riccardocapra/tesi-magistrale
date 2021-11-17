@@ -25,7 +25,7 @@ sequence = "00"
 
 dataset = RegnetDataset(basedir, sequence)
 dataset_size = len(dataset)
-print(dataset.__getitem__(0))
+# print(dataset.__getitem__(0))
 imageTensor = dataset.__getitem__(0)["rgb"]
 
 validation_split = .2
@@ -65,31 +65,22 @@ model.train()
 def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot):
     model.train()
 
-    rgb = rgb_img.to(device)
-    lidar = refl_img.to(device)
-    target_transl = target_transl.to(device)
-    target_rot = target_rot.to(device)
-
-    # target_transl = tr_error
-    # target_rot = rot_error
-
-    # print(target_transl.device)
-    # print(target_rot.device)
-
-    # if args.cuda:
-    #   rgb, lidar, target_transl, target_rot = rgb.cuda(), lidar.cuda(), target_transl.cuda(), target_rot.cuda()
+    # rgb = rgb_img.to(device)
+    # lidar = refl_img.to(device)
+    # target_transl = target_transl.to(device)
+    # target_rot = target_rot.to(device)
 
     optimizer.zero_grad()
-
+    print("qui1")
     # Run model
-    transl_err, rot_err = model(rgb, lidar)
+    transl_err, rot_err = model(rgb_img, refl_img)
 
     # Translation and rotation euclidean loss
     # Check euclidean distance between error predicted and the real one
     # loss = nn.MSELoss(reduction='none')
 
-    loss_transl = loss(transl_err, target_transl).sum(1).mean()
-    loss_rot = loss(rot_err, target_rot).sum(1).mean()
+    loss_transl = loss(transl_err, target_transl).sum().mean()
+    loss_rot = loss(rot_err, target_rot).sum()
 
     # Somma pesata???
     if args.loss == 'learnable':
@@ -101,7 +92,13 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot):
     optimizer.step()
 
     return total_loss.item()
-sample=dataset.__getitem__(0)
+sample = dataset.__getitem__(0)
 parameters = filter(lambda p: p.requires_grad, model.parameters())
 optimizer = optim.Adam(parameters, lr=0.00001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-loss = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+
+total_train_loss = 0
+local_loss = 0.
+total_iter = 0
+for batch_idx, sample in enumerate(TrainImgLoader):
+    loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+print("end")
