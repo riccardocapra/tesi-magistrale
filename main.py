@@ -65,6 +65,7 @@ model.train()
 def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot):
     model.train()
 
+
     # rgb = rgb_img.to(device)
     # lidar = refl_img.to(device)
     # target_transl = target_transl.to(device)
