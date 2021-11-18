@@ -6,7 +6,8 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import torch.optim as optim
 from dataset import RegnetDataset
 import numpy as np
-import pykitti
+import math
+# import pykitti
 from utils import data_formatter, perturbation
 
 parser = argparse.ArgumentParser(description='RegNet')
@@ -60,6 +61,19 @@ rescale_param = 751.0
 model = RegNet()
 model.train()
 # imageTensor2 = imageTensor[:, :1, :, :]
+
+
+def quaternion_distance(q, r):
+    # t = torch.zeros(4).to(device)
+    rinv = r.clone()
+    rinv[0] *= -1
+    t = rinv[0]*q[0] - rinv[1]*q[1] - rinv[2]*q[2] - rinv[3]*q[3]
+    # t[1] = r[0]*q[1] + r[1]*q[0] - r[2]*q[3] + r[3]*q[2]
+    # t[2] = r[0]*q[2] + r[1]*q[3] + r[2]*q[0] - r[3]*q[1]
+    # t[3] = r[0]*q[3] - r[1]*q[2] + r[2]*q[1] + r[3]*q[0]
+    dist = 2*math.acos(np.clip(math.fabs(t.item()), 0., 1.))
+    dist = 180. * dist / math.pi
+    return dist
 
 
 def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
@@ -143,4 +157,17 @@ c = 0
 for batch_idx, sample in enumerate(TrainImgLoader):
     loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
     c = c+1
-print("end")
+print("end training")
+
+## Test ##
+total_test_loss = 0
+total_test_t = 0.
+total_test_r = 0.
+
+local_loss = 0.0
+for batch_idx, sample in enumerate(TestImgLoader):
+            loss_test, trasl_e, rot_e = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+            total_test_t += trasl_e
+            total_test_r += rot_e
+            local_loss += loss_test
+print("end test")
