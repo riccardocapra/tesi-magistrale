@@ -62,19 +62,18 @@ model.train()
 # imageTensor2 = imageTensor[:, :1, :, :]
 
 
-def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot):
+def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
     model.train()
 
-
-    # rgb = rgb_img.to(device)
-    # lidar = refl_img.to(device)
-    # target_transl = target_transl.to(device)
-    # target_rot = target_rot.to(device)
+    rgb = rgb_img.to(device)
+    lidar = refl_img.to(device)
+    target_transl = target_transl.to(device)
+    target_rot = target_rot.to(device)
 
     optimizer.zero_grad()
-    print("qui1")
+    print(c)
     # Run model
-    transl_err, rot_err = model(rgb_img, refl_img)
+    transl_err, rot_err = model(rgb, lidar)
 
     # Translation and rotation euclidean loss
     # Check euclidean distance between error predicted and the real one
@@ -93,13 +92,55 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot):
     optimizer.step()
 
     return total_loss.item()
-sample = dataset.__getitem__(0)
+
+
+def test(model, rgb_img, refl_img, target_transl, target_rot):
+    model.eval()
+
+    rgb = rgb_img.to(device)
+    lidar = refl_img.to(device)
+    target_transl = target_transl.to(device)
+    target_rot = target_rot.to(device)
+
+    # target_transl = tr_error
+    # target_rot = rot_error
+
+    # if args.cuda:
+    #    rgb, lidar, target_transl, target_rot = rgb.cuda(), lidar.cuda(), target_transl.cuda(), target_rot.cuda()
+
+    # Run model
+    with torch.no_grad():
+        transl_err, rot_err = model(rgb, lidar)
+
+    # Translation and rotation euclidean loss
+    # Sum errors computed with the input pose and check the distance with the target one
+    loss = nn.MSELoss(reduction='none')
+
+    loss_transl = loss(transl_err, target_transl).sum(1).mean()
+    loss_rot = loss(rot_err, target_rot).sum(1).mean()
+
+    if args.loss == 'learnable':
+        total_loss = loss_transl * torch.exp(-model.sx) + model.sx + loss_rot * torch.exp(-model.sq) + model.sq
+    else:
+        total_loss = torch.add(loss_transl, rescale_param * loss_rot)
+
+    total_trasl_error = 0.0
+    total_rot_error = 0.0
+    for j in range(rgb.shape[0]):
+        total_trasl_error += torch.norm(target_transl[j] - transl_err[j]) * 100.
+        total_rot_error += quaternion_distance(target_rot[j], rot_err[j])
+
+    return total_loss.item(), total_trasl_error.item(), total_rot_error
+
+
 parameters = filter(lambda p: p.requires_grad, model.parameters())
 optimizer = optim.Adam(parameters, lr=0.00001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-
+model = model.to(device)
 total_train_loss = 0
 local_loss = 0.
 total_iter = 0
+c = 0
 for batch_idx, sample in enumerate(TrainImgLoader):
-    loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+    loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
+    c = c+1
 print("end")
