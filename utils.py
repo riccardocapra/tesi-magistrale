@@ -40,7 +40,7 @@ def depth_image_creation(depth, h, w):
     return depth_image
 
 
-def perturbation(h_init, p_factor):
+def perturbation(h_init, rot_error, tr_error):
     cupy.cuda.Device(2)
     new_h_init = np.copy(h_init)
     # print("Rotazione matrice originale:")
@@ -56,7 +56,7 @@ def perturbation(h_init, p_factor):
     # print("Matrice che genererebbe quei quaternioni:")
     # print(quat_rot_matrix)
 
-    rotation_array = R.from_euler('zyx', p_factor, degrees=True)
+    rotation_array = R.from_euler('zyx', rot_error, degrees=True)
     # h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
     h_mat = R.from_matrix(cupy.dot(new_h_init[:3, :3], rotation_array.as_matrix()))
     # quat_rot = h_mat.as_quat()
@@ -72,7 +72,7 @@ def perturbation(h_init, p_factor):
     return new_h_init
 
 
-def data_formatter_pcl_single(dataset, idx):
+def data_formatter_pcl_single(dataset, idx, tr_error, rot_error):
     cupy.cuda.Device(2)
     # print("---- VELO_IMAGE "+str(idx)+" FORMATTING BEGUN ---")
     depth = dataset.get_velo(idx).T
@@ -81,8 +81,10 @@ def data_formatter_pcl_single(dataset, idx):
     h, w = 352, 1241
     depth_image = depth_image_creation(depth_n, h, w)
     # cv2.imwrite('Original.jpeg', depth_image)
-    perturbation_vector = [0, 0, 45]
-    new_h_init = perturbation(h_init, perturbation_vector)
+    # perturbation_vector = [0, 0, 45]
+
+    new_h_init = perturbation(h_init, rot_error, tr_error)
+
     depth_p = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
     # depth_image_p = depth_image_creation(depth_p, h, w)
     # cv2.imwrite('Perturbated.jpeg', depth_image_p)

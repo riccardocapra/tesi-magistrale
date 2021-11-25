@@ -69,8 +69,10 @@ class RegnetDataset(Dataset):
         rgb_img = Image.open(rgb_files[idx])
         to_tensor = transforms.ToTensor()
         rgb = to_tensor(rgb_img)
+        tr_error = [0, 0, 0]
+        rot_error = [0, 0, 0]
 
-        depth = data_formatter_pcl_single(self.dataset, idx)
+        depth = data_formatter_pcl_single(self.dataset, idx, tr_error, rot_error)
 
         # if self.pose_type == "quaternions":
         #     translation = self.csv_file.iloc[idx, 4]
@@ -85,9 +87,6 @@ class RegnetDataset(Dataset):
         # translation = translation.split(';')
         # rotation = rotation.split(';')
 
-        tr = [0, 0, 0]
-        rot = [0, 0, 0]
-
         # for el in translation:
         #     tr.append(float(el))
         #
@@ -96,8 +95,8 @@ class RegnetDataset(Dataset):
 
         # If tensor has odd number of values, it's not possible to split it using an elegant way
         # Now rotation and translation are considered separately
-        tr = torch.from_numpy(np.array(tr)).float()
-        rot = torch.from_numpy(np.array(rot)).float()
+        tr = torch.from_numpy(np.array(tr_error)).float()
+        rot = torch.from_numpy(np.array(rot_error)).float()
 
         sample = {'idx': idx, 'rgb': rgb.float(), 'lidar': depth.float(), 'tr_error': tr, 'rot_error': rot}
 
