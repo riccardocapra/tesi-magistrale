@@ -8,6 +8,8 @@ from dataset import RegnetDataset
 import numpy as np
 import math
 # import pykitti
+from scipy.spatial.transform import Rotation as R
+
 from utils import data_formatter, perturbation
 
 parser = argparse.ArgumentParser(description='RegNet')
@@ -29,7 +31,7 @@ dataset_size = len(dataset)
 # print(dataset.__getitem__(0))
 imageTensor = dataset.__getitem__(0)["rgb"]
 
-validation_split = .2
+validation_split = .8#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # training_split = .8
 shuffle_dataset = False
 random_seed = 42
@@ -64,10 +66,20 @@ model.train()
 
 
 def quaternion_distance(q, r):
+    r = r.cpu()
+    q = q.cpu()
+
+    r_quat = R.from_euler('zyx', r, degrees=True)
+    r_quat = r_quat.as_quat()
+    r_quat[0] *= -1
+
+    q_quat = R.from_euler('zyx', q, degrees=True)
+    q_quat = q_quat.as_quat()
+
     # t = torch.zeros(4).to(device)
-    rinv = r.clone()
-    rinv[0] *= -1
-    t = rinv[0]*q[0] - rinv[1]*q[1] - rinv[2]*q[2] - rinv[3]*q[3]
+    #rinv = r.clone()
+    #rinv[0] *= -1
+    t = r_quat[0]*q_quat[0] - r_quat[1]*q_quat[1] - r_quat[2]*q_quat[2] - r_quat[3]*q_quat[3]
     # t[1] = r[0]*q[1] + r[1]*q[0] - r[2]*q[3] + r[3]*q[2]
     # t[2] = r[0]*q[2] + r[1]*q[3] + r[2]*q[0] - r[3]*q[1]
     # t[3] = r[0]*q[3] - r[1]*q[2] + r[2]*q[1] + r[3]*q[0]
@@ -108,9 +120,9 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
     return total_loss.item()
 
 
-def test(model, rgb_img, refl_img, target_transl, target_rot):
+def test(model, rgb_img, refl_img, target_transl, target_rot, c):
     model.eval()
-
+    print(c)
     rgb = rgb_img.to(device)
     lidar = refl_img.to(device)
     target_transl = target_transl.to(device)
@@ -163,11 +175,12 @@ print("end training")
 total_test_loss = 0
 total_test_t = 0.
 total_test_r = 0.
-
+c = 0
 local_loss = 0.0
 for batch_idx, sample in enumerate(TestImgLoader):
-            loss_test, trasl_e, rot_e = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+            loss_test, trasl_e, rot_e = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
             total_test_t += trasl_e
             total_test_r += rot_e
             local_loss += loss_test
+            c = c+1
 print("end test")

@@ -51,6 +51,7 @@ class RegnetDataset(Dataset):
         rgb = normalization(rgb)
         return rgb
 
+
     def __len__(self):
         return len(self.dataset.velo_files)
 
