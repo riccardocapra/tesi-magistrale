@@ -31,7 +31,7 @@ dataset_size = len(dataset)
 # print(dataset.__getitem__(0))
 imageTensor = dataset.__getitem__(0)["rgb"]
 
-validation_split = .8#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+validation_split = .2#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # training_split = .8
 shuffle_dataset = False
 random_seed = 42
@@ -168,8 +168,10 @@ total_iter = 0
 c = 0
 for batch_idx, sample in enumerate(TrainImgLoader):
     loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
+    # print(loss_train)
     c = c+1
 print("end training")
+print("loss_train: "+str(loss_train))
 
 ## Test ##
 total_test_loss = 0
@@ -184,3 +186,6 @@ for batch_idx, sample in enumerate(TestImgLoader):
             local_loss += loss_test
             c = c+1
 print("end test")
+print("total_test_t: "+str(total_test_t))
+print("total_test_r: "+str(total_test_r))
+

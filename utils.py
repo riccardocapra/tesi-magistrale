@@ -98,6 +98,8 @@ def depth_tensor_creation(depth):
     h, w = 352, 1216
     to_tensor = transforms.ToTensor()
     depth = depth.T
+    zliby
+    x
     perturbation_vector = [0, 0, 45]
     new_h_init = perturbation(dataset.calib.T_cam2_velo, perturbation_vector)
     depth = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
