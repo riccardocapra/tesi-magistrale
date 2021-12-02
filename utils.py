@@ -81,17 +81,18 @@ def data_formatter_pcl_single(dataset, idx, tr_error, rot_error):
     h, w = 352, 1241
     depth_image = depth_image_creation(depth_n, h, w)
     # cv2.imwrite('Original.jpeg', depth_image)
+
     # perturbation_vector = [0, 0, 45]
 
     new_h_init = perturbation(h_init, rot_error, tr_error)
 
     depth_p = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
-    # depth_image_p = depth_image_creation(depth_p, h, w)
+    depth_image_p = depth_image_creation(depth_p, h, w)
     # cv2.imwrite('Perturbated.jpeg', depth_image_p)
 
     # print("---- VELO_IMAGE FORMATTING ENDED ---")
     to_tensor = transforms.ToTensor()
-    depth_image_tensor = to_tensor(depth_image)
+    depth_image_tensor = to_tensor(depth_image_p)
     return depth_image_tensor
 
 
@@ -100,8 +101,6 @@ def depth_tensor_creation(depth):
     h, w = 352, 1216
     to_tensor = transforms.ToTensor()
     depth = depth.T
-    zliby
-    x
     perturbation_vector = [0, 0, 45]
     new_h_init = perturbation(dataset.calib.T_cam2_velo, perturbation_vector)
     depth = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)

@@ -14,17 +14,19 @@ import pykitti
 class RegnetDataset(Dataset):
     """RegNet dataset."""
 
-    def __init__(self, dataset_dir, sequence, pose_type=None, seed=None, transform=None):
+    def __init__(self, dataset_dir, sequences, pose_type=None, seed=None, transform=None):
 
         """
-
         :param dataset_dir: directory where dataset is located
         :param pose_type: type of pose representation: Euler angles, Quaternions, Dual quaternions
         :param transform: transform operations applied on the input images
         """
 
         self.root_dir = dataset_dir
-        self.dataset = pykitti.odometry(dataset_dir, sequence)
+        self.datasets = []
+        for sequence in sequences:
+            print(sequence)
+            self.datasets.append(pykitti.odometry(dataset_dir, sequence))
         # self.csv_file = pd.read_csv(os.path.join(dataset_dir, "dataset.csv"),
         #                             sep=',',
         #                             header=None,
@@ -53,45 +55,32 @@ class RegnetDataset(Dataset):
 
 
     def __len__(self):
-        return len(self.dataset.velo_files)
+        lenght = 0
+        for dataset in self.datasets:
+            lenght = lenght+len(dataset.velo_files)
+        return lenght
 
     def __getitem__(self, idx):
+        rgb_files = []
+        depth = []
+        rot_error = [0, 0, 0]
+        tr_error = [0, 0, 0]
+        z_error = random.randrange(-5, 5)
+        rot_error[0] = z_error
 
-        rgb_files = self.dataset.cam2_files
-
-
-        # rgb_name = os.path.join(self.root_dir, self.csv_file.iloc[idx, 0])
-        # refl_name = os.path.join(self.root_dir, self.csv_file.iloc[idx, 1])
-        # depth_name = os.path.join(self.root_dir, self.csv_file.iloc[idx, 2])
-        #
-        # camera_roll = str(self.csv_file.iloc[idx, 3])
+        for dataset in self.datasets:
+            rgb_files.append(dataset.cam2_files)
+            depth.append(data_formatter_pcl_single(self.dataset, idx, tr_error, rot_error))
 
         rgb_img = Image.open(rgb_files[idx])
         to_tensor = transforms.ToTensor()
         rgb = to_tensor(rgb_img)
-        tr_error = [0, 0, 0]
-        rot_error = [0, 0, 0]
 
-        depth = data_formatter_pcl_single(self.dataset, idx, tr_error, rot_error)
+        # error on the z,y,x axis
 
-        # if self.pose_type == "quaternions":
-        #     translation = self.csv_file.iloc[idx, 4]
-        #     rotation = self.csv_file.iloc[idx, 6]
-        # elif self.pose_type == "dual_quaternions":
-        #     translation = self.csv_file.iloc[idx, 8]
-        #     rotation = self.csv_file.iloc[idx, 7]
-        # else:
-        #     translation = self.csv_file.iloc[idx, 4]
-        #     rotation = self.csv_file.iloc[idx, 5]
 
-        # translation = translation.split(';')
-        # rotation = rotation.split(';')
+        # print("rot error: "+str(rot_error))
 
-        # for el in translation:
-        #     tr.append(float(el))
-        #
-        # for el in rotation:
-        #     rot.append(float(el))
 
         # If tensor has odd number of values, it's not possible to split it using an elegant way
         # Now rotation and translation are considered separately

@@ -7,6 +7,7 @@ import torch.optim as optim
 from dataset import RegnetDataset
 import numpy as np
 import math
+import random
 # import pykitti
 from scipy.spatial.transform import Rotation as R
 
@@ -23,18 +24,18 @@ args = parser.parse_args()
 device = torch.device("cuda:2")
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = "00"
-
+sequence = ["00", "03", "02"]
+# Set the rando seed used for the permutations
+random.seed(1)
 
 dataset = RegnetDataset(basedir, sequence)
 dataset_size = len(dataset)
 # print(dataset.__getitem__(0))
 imageTensor = dataset.__getitem__(0)["rgb"]
 
-validation_split = .2#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+validation_split = .2
 # training_split = .8
 shuffle_dataset = False
-random_seed = 42
 indices = list(range(dataset_size))
 split = int(np.floor(validation_split * dataset_size))
 train_indices, val_indices = indices[split:], indices[:split]
@@ -116,6 +117,7 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
 
     total_loss.backward()
     optimizer.step()
+    print(total_loss)
 
     return total_loss.item()
 
