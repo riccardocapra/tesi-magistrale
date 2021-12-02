@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation as R
 import cupy
 import multiprocessing
 from os import getpid
-
+import os
 
 def pcl_rt(depth_pts, H, K):
     cupy.cuda.Device(2)
@@ -72,10 +72,16 @@ def perturbation(h_init, rot_error, tr_error):
     return new_h_init
 
 
-def data_formatter_pcl_single(dataset, idx, tr_error, rot_error):
+def data_formatter_pcl_single(velo_files, idx, tr_error, rot_error):
     cupy.cuda.Device(2)
     # print("---- VELO_IMAGE "+str(idx)+" FORMATTING BEGUN ---")
-    depth = dataset.get_velo(idx).T
+    depth = scan_loader(velo_files[idx]).T
+    # print(velo_files[idx])
+    # FInd the sequence number in the file name
+    sequence = velo_files[idx].split('/')
+
+    # print(path[-1])
+    # depth = dataset.get_velo(idx).T
     h_init = np.copy(dataset.calib.T_cam2_velo)
     depth_n = pcl_rt(depth, h_init, dataset.calib.K_cam2)
     h, w = 352, 1241

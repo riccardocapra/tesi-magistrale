@@ -24,7 +24,7 @@ args = parser.parse_args()
 device = torch.device("cuda:2")
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = ["00", "03", "02"]
+sequence = ["00", "02", "03"]
 # Set the rando seed used for the permutations
 random.seed(1)
 
