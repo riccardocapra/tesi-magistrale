@@ -23,24 +23,23 @@ class RegnetDataset(Dataset):
         """
 
         self.root_dir = dataset_dir
-        self.datasets = []
         self.calibs = []
+        self.datasets = dict()
+        self.datasets = dict.fromkeys(sequences, [])
         for sequence in sequences:
             print(sequence)
             dataset = pykitti.odometry(dataset_dir, sequence)
-            self.datasets.append(dataset)
-            self.calibs.append([sequence, dataset.calib])
+            self.datasets[sequence] = dataset
 
         self.rgb_files = []
         self.velo_files = []
 
         self.sizes = []
-        self.lenght = 0
-        for dataset in self.datasets:
-
-            self.rgb_files = [*self.rgb_files, *dataset.cam2_files]
-            self.velo_files = [*self.velo_files, *dataset.velo_files]
-            self.lenght = self.lenght + len(dataset.velo_files)
+        self.length = 0
+        for key in self.datasets:
+            self.rgb_files = [*self.rgb_files, *self.datasets[key].cam2_files]
+            self.velo_files = [*self.velo_files, *self.datasets[key].velo_files]
+            self.length = self.length + len(self.datasets[key].velo_files)
             self.sizes.append(len(dataset.velo_files))
         # self.csv_file = pd.read_csv(os.path.join(dataset_dir, "dataset.csv"),
         #                             sep=',',
@@ -69,16 +68,15 @@ class RegnetDataset(Dataset):
         return rgb
 
     def __len__(self):
-        return self.lenght
+        return self.length
 
     def __getitem__(self, idx):
         rgb_filess = self.rgb_files
-        depth = []
         rot_error = [0, 0, 0]
         tr_error = [0, 0, 0]
         z_error = random.randrange(-5, 5)
         rot_error[0] = z_error
-        depth.append(data_formatter_pcl_single(self.velo_files, idx, tr_error, rot_error))
+        depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
 
         rgb_img = Image.open(self.rgb_files[idx])
         to_tensor = transforms.ToTensor()

@@ -72,14 +72,15 @@ def perturbation(h_init, rot_error, tr_error):
     return new_h_init
 
 
-def data_formatter_pcl_single(velo_files, idx, tr_error, rot_error):
+def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     cupy.cuda.Device(2)
     # print("---- VELO_IMAGE "+str(idx)+" FORMATTING BEGUN ---")
     depth = scan_loader(velo_files[idx]).T
     # print(velo_files[idx])
     # FInd the sequence number in the file name
-    sequence = velo_files[idx].split('/')
-
+    sequence = velo_files[idx].split('/')[-3]
+    print(sequence)
+    dataset = datasets[sequence]
     # print(path[-1])
     # depth = dataset.get_velo(idx).T
     h_init = np.copy(dataset.calib.T_cam2_velo)
@@ -108,8 +109,8 @@ def depth_tensor_creation(depth):
     to_tensor = transforms.ToTensor()
     depth = depth.T
     perturbation_vector = [0, 0, 45]
-    new_h_init = perturbation(dataset.calib.T_cam2_velo, perturbation_vector)
-    depth = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
+    new_h_init = perturbation(global_dataset.calib.T_cam2_velo, perturbation_vector)
+    depth = pcl_rt(depth, new_h_init, global_dataset.calib.K_cam2)
     depth_image = depth_image_creation(depth, h, w)
     depth_image_tensor = to_tensor(depth_image)
     # depth_images_tensor.append(depth_image_tensor)
@@ -182,19 +183,19 @@ def data_formatter_pcl_multiprocessing(dataset):
     return depth_images_tensor
 
 
-dataset = []
+global_dataset = []
 
 
 def data_formatter(basedir):
     print("-- DATA FORMATTING BEGUN ---")
     sequence = '00'
-    global dataset
-    dataset = pykitti.odometry(basedir, sequence)
+    global global_dataset
+    global_dataset = pykitti.odometry(basedir, sequence)
     # depth_array = data_formatter_pcl(dataset)
-    depth_array = data_formatter_pcl_multiprocessing(dataset)
+    depth_array = data_formatter_pcl_multiprocessing(global_dataset)
     # depth = torch.from_numpy(depth / (2 ** 16)).float()
     # Le camere 2 e 3 sono quelle a colori, verificato. Mi prendo la 2.
-    rgb_files = dataset.cam2_files
+    rgb_files = global_dataset.cam2_files
     # print(rgb_files)
     to_tensor = transforms.ToTensor()
     normalization = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])

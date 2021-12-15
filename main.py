@@ -44,14 +44,14 @@ valid_sampler = SubsetRandomSampler(val_indices)
 
 TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                              sampler=train_sampler,
-                                             batch_size=10,
+                                             batch_size=2,
                                              num_workers=4,
                                              drop_last=False,
                                              pin_memory=True)
 
 TestImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                             sampler=valid_sampler,
-                                            batch_size=10,
+                                            batch_size=2,
                                             num_workers=4,
                                             drop_last=False,
                                             pin_memory=True)
