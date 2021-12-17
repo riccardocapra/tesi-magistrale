@@ -83,14 +83,10 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
     # Check euclidean distance between error predicted and the real one
     # loss = nn.MSELoss(reduction='none')
 
-    loss_transl = loss(transl_err, target_transl).sum().mean()
-    loss_rot = loss(rot_err, target_rot).sum().mean()
+    loss_transl = loss(transl_err, target_transl).sum(1).mean()
+    loss_rot = loss(rot_err, target_rot).sum(1).mean()
 
-    # Somma pesata???
-    if args.loss == 'learnable':
-        total_loss = loss_transl * torch.exp(-model.sx) + model.sx + loss_rot * torch.exp(-model.sq) + model.sq
-    else:
-        total_loss = torch.add(loss_transl, rescale_param * loss_rot)
+    total_loss = torch.add(loss_transl, rescale_param * loss_rot)
 
     total_loss.backward()
     optimizer.step()
