@@ -62,7 +62,7 @@ loss = nn.SmoothL1Loss(reduction='none')
 rescale_param = 751.0
 
 model = RegNet()
-model.train()
+model = model.to(device)
 # imageTensor2 = imageTensor[:, :1, :, :]
 
 
@@ -75,7 +75,7 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
     target_rot = target_rot.to(device)
 
     optimizer.zero_grad()
-    print(c)
+    # print(c)
     # Run model
     transl_err, rot_err = model(rgb, lidar)
 
@@ -94,7 +94,7 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
 
     total_loss.backward()
     optimizer.step()
-    print(total_loss)
+    # print(total_loss)
 
     return total_loss.item()
 
@@ -140,31 +140,32 @@ def test(model, rgb_img, refl_img, target_transl, target_rot, c):
 
 parameters = filter(lambda p: p.requires_grad, model.parameters())
 optimizer = optim.Adam(parameters, lr=0.00001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-model = model.to(device)
-total_train_loss = 0
-local_loss = 0.
-total_iter = 0
-c = 0
-for batch_idx, sample in enumerate(TrainImgLoader):
-    loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
-    # print(loss_train)
-    c = c+1
-print("end training")
-print("loss_train: "+str(loss_train))
+for epoch in range(0, 10):
+    print('This is %d-th epoch' % epoch)
+    total_train_loss = 0
+    local_loss = 0.
+    total_iter = 0
+    c = 0
+    for batch_idx, sample in enumerate(TrainImgLoader):
+        loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
+        local_loss = local_loss+loss_train
+        c = c+1
 
-## Test ##
-total_test_loss = 0
-total_test_t = 0.
-total_test_r = 0.
-c = 0
-local_loss = 0.0
-for batch_idx, sample in enumerate(TestImgLoader):
-            loss_test, trasl_e, rot_e = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
-            total_test_t += trasl_e
-            total_test_r += rot_e
-            local_loss += loss_test
-            c = c+1
-print("end test")
-print("total_test_t: "+str(total_test_t))
-print("total_test_r: "+str(total_test_r))
+    print("epoch "+str(epoch)+" loss_train: "+str(local_loss/len(train_sampler)))
+
+    ## Test ##
+    total_test_loss = 0
+    total_test_t = 0.
+    total_test_r = 0.
+    c = 0
+    local_loss = 0.0
+    # for batch_idx, sample in enumerate(TestImgLoader):
+    #             loss_test, trasl_e, rot_e = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
+    #             total_test_t += trasl_e
+    #             total_test_r += rot_e
+    #             local_loss += loss_test
+    #             c = c+1
+    # print("end test")
+    print("total_test_t: "+str(total_test_t))
+    print("total_test_r: "+str(total_test_r))
 
