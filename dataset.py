@@ -23,7 +23,6 @@ class RegnetDataset(Dataset):
         """
 
         self.root_dir = dataset_dir
-        self.calibs = []
         self.datasets = dict()
         self.datasets = dict.fromkeys(sequences, [])
         for sequence in sequences:
@@ -71,10 +70,9 @@ class RegnetDataset(Dataset):
         return self.length
 
     def __getitem__(self, idx):
-        rgb_filess = self.rgb_files
         rot_error = [0, 0, 0]
         tr_error = [0, 0, 0]
-        z_error = random.randrange(-5, 5)
+        z_error = random.randrange(-2, 2)
         rot_error[0] = z_error
         depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
 
@@ -82,7 +80,7 @@ class RegnetDataset(Dataset):
         to_tensor = transforms.ToTensor()
         rgb = to_tensor(rgb_img)
 
-        # error on the z,y,x axis
+        # error on the z, y, x-axis
 
         # print("rot error: "+str(rot_error))
 

@@ -8,8 +8,33 @@ from datetime import datetime
 from scipy.spatial.transform import Rotation as R
 import cupy
 import multiprocessing
+import math
 from os import getpid
 import os
+
+
+def quaternion_distance(q, r):
+    r = r.cpu()
+    q = q.cpu()
+
+    r_quat = R.from_euler('zyx', r, degrees=True)
+    r_quat = r_quat.as_quat()
+    r_quat[0] *= -1
+
+    q_quat = R.from_euler('zyx', q, degrees=True)
+    q_quat = q_quat.as_quat()
+
+    # t = torch.zeros(4).to(device)
+    #rinv = r.clone()
+    #rinv[0] *= -1
+    t = r_quat[0]*q_quat[0] - r_quat[1]*q_quat[1] - r_quat[2]*q_quat[2] - r_quat[3]*q_quat[3]
+    # t[1] = r[0]*q[1] + r[1]*q[0] - r[2]*q[3] + r[3]*q[2]
+    # t[2] = r[0]*q[2] + r[1]*q[3] + r[2]*q[0] - r[3]*q[1]
+    # t[3] = r[0]*q[3] - r[1]*q[2] + r[2]*q[1] + r[3]*q[0]
+    dist = 2*math.acos(np.clip(math.fabs(t.item()), 0., 1.))
+    dist = 180. * dist / math.pi
+    return dist
+
 
 def pcl_rt(depth_pts, H, K):
     cupy.cuda.Device(2)
@@ -79,7 +104,7 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     # print(velo_files[idx])
     # FInd the sequence number in the file name
     sequence = velo_files[idx].split('/')[-3]
-    print(sequence)
+    # print(sequence)
     dataset = datasets[sequence]
     # print(path[-1])
     # depth = dataset.get_velo(idx).T
@@ -119,9 +144,11 @@ def depth_tensor_creation(depth):
 
 
 def scan_loader(file):
+    #print(file)
     scan = np.fromfile(file, dtype=np.float32)
     scan = scan.reshape((-1, 4))
     return scan
+
 
 def data_formatter_pcl(dataset):
     print("---- VELO_IMAGES FORMATTING BEGUN ---")
@@ -158,12 +185,14 @@ def data_formatter_pcl(dataset):
     print("---- VELO_IMAGES FORMATTING ENDED ---")
     return depth_images_tensor
 
+
 def data_formatter_pcl_multiprocessing(dataset):
     print("---- VELO_IMAGES FORMATTING BEGUN ---")
     velo_files = dataset.velo_files[:50]
     start_time = datetime.now()
     with multiprocessing.Pool(12) as p:
         depths = p.map(scan_loader, velo_files)
+        p.terminate()
     # scan = np.fromfile(velo_files, dtype=np.float32)
     # scan.reshape((-1, 4))
     end_time = datetime.now()
@@ -209,34 +238,3 @@ def data_formatter(basedir):
     print("-- DATA FORMATTING ENDED ---")
     return rgb.float(), depth_array.float()
 
-
-# The velodyne point clouds are stored in the folder 'velodyne_points'. To
-# save space, all scans have been stored as Nx4 float matrix into a binary
-# file.
-# Here, data contains 4*num values, where the first 3 values correspond to
-# x,y and z, and the last value is the reflectance information. All scans
-# are stored row-aligned, meaning that the first 4 values correspond to the
-# first measurement.
-
-
-def get_calib(basedir):
-    cupy.cuda.Device(2)
-    sequence = '00'
-    dataset = pykitti.odometry(basedir, sequence)
-    print(dataset.calib.T_cam2_velo)
-    print("Cam left color:")
-    f = open(basedir + "sequences/00/calib.txt", "r")
-    lines = f.readlines()
-    for l in lines:
-        print(l)
-    f.close
-
-    return
-
-
-# We need to pass to regNet a rgb and a velo flow
-
-
-def dataset_construction(rgb, lidar):
-    sample = {'rgb': rgb.float(), 'lidar': lidar.float()}
-    return sample

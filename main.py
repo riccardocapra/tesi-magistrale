@@ -6,12 +6,11 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import torch.optim as optim
 from dataset import RegnetDataset
 import numpy as np
-import math
+import utils
 import random
 # import pykitti
 from scipy.spatial.transform import Rotation as R
 
-from utils import data_formatter, perturbation
 
 parser = argparse.ArgumentParser(description='RegNet')
 parser.add_argument('--loss', default='simple',
@@ -22,16 +21,17 @@ args = parser.parse_args()
 
 
 device = torch.device("cuda:2")
+
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = ["00", "02", "03"]
+sequence = ["00"]
 # Set the rando seed used for the permutations
 random.seed(1)
 
 dataset = RegnetDataset(basedir, sequence)
 dataset_size = len(dataset)
 # print(dataset.__getitem__(0))
-imageTensor = dataset.__getitem__(0)["rgb"]
+# imageTensor = dataset.__getitem__(0)["rgb"]
 
 validation_split = .2
 # training_split = .8
@@ -44,14 +44,14 @@ valid_sampler = SubsetRandomSampler(val_indices)
 
 TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                              sampler=train_sampler,
-                                             batch_size=2,
+                                             batch_size=4,
                                              num_workers=4,
                                              drop_last=False,
                                              pin_memory=True)
 
 TestImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                             sampler=valid_sampler,
-                                            batch_size=2,
+                                            batch_size=4,
                                             num_workers=4,
                                             drop_last=False,
                                             pin_memory=True)
@@ -64,29 +64,6 @@ rescale_param = 751.0
 model = RegNet()
 model.train()
 # imageTensor2 = imageTensor[:, :1, :, :]
-
-
-def quaternion_distance(q, r):
-    r = r.cpu()
-    q = q.cpu()
-
-    r_quat = R.from_euler('zyx', r, degrees=True)
-    r_quat = r_quat.as_quat()
-    r_quat[0] *= -1
-
-    q_quat = R.from_euler('zyx', q, degrees=True)
-    q_quat = q_quat.as_quat()
-
-    # t = torch.zeros(4).to(device)
-    #rinv = r.clone()
-    #rinv[0] *= -1
-    t = r_quat[0]*q_quat[0] - r_quat[1]*q_quat[1] - r_quat[2]*q_quat[2] - r_quat[3]*q_quat[3]
-    # t[1] = r[0]*q[1] + r[1]*q[0] - r[2]*q[3] + r[3]*q[2]
-    # t[2] = r[0]*q[2] + r[1]*q[3] + r[2]*q[0] - r[3]*q[1]
-    # t[3] = r[0]*q[3] - r[1]*q[2] + r[2]*q[1] + r[3]*q[0]
-    dist = 2*math.acos(np.clip(math.fabs(t.item()), 0., 1.))
-    dist = 180. * dist / math.pi
-    return dist
 
 
 def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
@@ -107,7 +84,7 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
     # loss = nn.MSELoss(reduction='none')
 
     loss_transl = loss(transl_err, target_transl).sum().mean()
-    loss_rot = loss(rot_err, target_rot).sum()
+    loss_rot = loss(rot_err, target_rot).sum().mean()
 
     # Somma pesata???
     if args.loss == 'learnable':
@@ -156,7 +133,7 @@ def test(model, rgb_img, refl_img, target_transl, target_rot, c):
     total_rot_error = 0.0
     for j in range(rgb.shape[0]):
         total_trasl_error += torch.norm(target_transl[j] - transl_err[j]) * 100.
-        total_rot_error += quaternion_distance(target_rot[j], rot_err[j])
+        total_rot_error += utils.quaternion_distance(target_rot[j], rot_err[j])
 
     return total_loss.item(), total_trasl_error.item(), total_rot_error
 
