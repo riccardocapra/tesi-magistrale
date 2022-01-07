@@ -20,7 +20,7 @@ args = parser.parse_args()
 # args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 
-device = torch.device("cuda:2")
+device = torch.device("cuda:1")
 
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
@@ -142,10 +142,12 @@ for epoch in range(0, 10):
     local_loss = 0.
     total_iter = 0
     c = 0
+    tot=len(TrainImgLoader)
     for batch_idx, sample in enumerate(TrainImgLoader):
         loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
         local_loss = local_loss+loss_train
         c = c+1
+        print(str(c)+"/"+str(tot))
 
     print("epoch "+str(epoch)+" loss_train: "+str(local_loss/len(train_sampler)))
 
@@ -164,4 +166,11 @@ for epoch in range(0, 10):
     # print("end test")
     print("total_test_t: "+str(total_test_t))
     print("total_test_r: "+str(total_test_r))
+#save the model
+torch.save(model.state_dict(), "./models/model.pt")
+# test model load
+model = RegNet()
+model.load_state_dict(torch.load("./models/model.pt"))
+model.eval()
+
 

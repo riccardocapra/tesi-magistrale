@@ -1,5 +1,4 @@
 import argparse
-
 import utils
 from regNet import RegNet
 import torch
@@ -20,9 +19,11 @@ sequence = ["00"]
 # Set the rando seed used for the permutations
 random.seed(1)
 
-dataset = RegnetDataset(basedir, sequence)
-dataset_size = len(dataset)
-item = dataset.__getitem__(0)
-quat = R.from_euler('zyx', item["rot_error"].tolist(), degrees=True)
-dist = utils.quaternion_distance([0,0,0],[1,0,0])
 
+device = torch.device("cuda:1")
+
+model = RegNet()
+model = model.to(device)
+
+model.load_state_dict(torch.load("./models/model.pt"))
+model.eval()
