@@ -26,7 +26,7 @@ class RegnetDataset(Dataset):
         self.datasets = dict()
         self.datasets = dict.fromkeys(sequences, [])
         for sequence in sequences:
-            print(sequence)
+            # print(sequence)
             dataset = pykitti.odometry(dataset_dir, sequence)
             self.datasets[sequence] = dataset
 
@@ -36,10 +36,12 @@ class RegnetDataset(Dataset):
         self.sizes = []
         self.length = 0
         for key in self.datasets:
+            # print(key)
             self.rgb_files = [*self.rgb_files, *self.datasets[key].cam2_files]
             self.velo_files = [*self.velo_files, *self.datasets[key].velo_files]
             self.length = self.length + len(self.datasets[key].velo_files)
-            self.sizes.append(len(dataset.velo_files))
+            self.sizes.append(len(self.datasets[key]))
+            # print(len(self.datasets[key]))
         # self.csv_file = pd.read_csv(os.path.join(dataset_dir, "dataset.csv"),
         #                             sep=',',
         #                             header=None,
@@ -76,9 +78,19 @@ class RegnetDataset(Dataset):
         rot_error[0] = z_error
         depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
 
+        # Image have to be resized to
+
         rgb_img = Image.open(self.rgb_files[idx])
+        width, height = rgb_img.size
+        width_difference = width-1216
+        height_difference = height-352
+        # rgb_img_cropped = rgb_img.crop((left, top, right, bottom))
+        rgb_img_cropped = rgb_img.crop((0, 0, 1216, 352))
+        width, height = rgb_img.size
+        #print(str(width)+" "+str(height))
+
         to_tensor = transforms.ToTensor()
-        rgb = to_tensor(rgb_img)
+        rgb = to_tensor(rgb_img_cropped)
 
         # error on the z, y, x-axis
 

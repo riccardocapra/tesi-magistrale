@@ -110,7 +110,7 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     # depth = dataset.get_velo(idx).T
     h_init = np.copy(dataset.calib.T_cam2_velo)
     depth_n = pcl_rt(depth, h_init, dataset.calib.K_cam2)
-    h, w = 352, 1241
+    h, w = 352, 1216
     depth_image = depth_image_creation(depth_n, h, w)
     # cv2.imwrite('Original.jpeg', depth_image)
 
@@ -165,7 +165,6 @@ def data_formatter_pcl(dataset):
     end_time = end_time - start_time
     print("---- Secondi passati per conversione lista: " + str(end_time.total_seconds()))
 
-    depth_images_tensor = []
     start_time = datetime.now()
     # c = 1
     depth_images_tensor = []
