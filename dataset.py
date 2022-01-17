@@ -9,7 +9,7 @@ import random
 from torchvision import transforms
 from utils import data_formatter_pcl_single
 import pykitti
-
+from math import radians
 
 class RegnetDataset(Dataset):
     """RegNet dataset."""
@@ -74,7 +74,7 @@ class RegnetDataset(Dataset):
     def __getitem__(self, idx):
         rot_error = [0, 0, 0]
         tr_error = [0, 0, 0]
-        z_error = random.randrange(-2, 2)
+        z_error = radians(random.randrange(-20, 20))
         rot_error[0] = z_error
         depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
 

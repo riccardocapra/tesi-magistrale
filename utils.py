@@ -81,7 +81,7 @@ def perturbation(h_init, rot_error, tr_error):
     # print("Matrice che genererebbe quei quaternioni:")
     # print(quat_rot_matrix)
 
-    rotation_array = R.from_euler('zyx', rot_error, degrees=True)
+    rotation_array = R.from_euler('ZXY', rot_error)
     # h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
     h_mat = R.from_matrix(cupy.dot(new_h_init[:3, :3], rotation_array.as_matrix()))
     # quat_rot = h_mat.as_quat()

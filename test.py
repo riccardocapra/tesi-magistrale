@@ -22,8 +22,13 @@ random.seed(1)
 
 device = torch.device("cuda:1")
 
-model = RegNet()
-model = model.to(device)
 
-model.load_state_dict(torch.load("./models/model.pt"))
-model.eval()
+dataset = RegnetDataset(basedir, sequence)
+dataset_size = len(dataset)
+rot_error = dataset.__getitem__(0)["rot_error"]
+
+# rot_error = rot_error.cpu()
+rot_error = rot_error.detach().numpy()
+# tra maiuscole e minuscole cambia ordine tasformazioni
+r_euler = R.from_euler('ZYX', rot_error)
+r_euler = r_euler.as_euler('ZYX', degrees=True)

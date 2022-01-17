@@ -12,13 +12,13 @@ import random
 from scipy.spatial.transform import Rotation as R
 
 
-def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
+def train(model, optimizer, rgb_img, refl_img, target_transl_error, target_rot_error, c):
     model.train()
 
     rgb = rgb_img.to(device)
     lidar = refl_img.to(device)
-    target_transl = target_transl.to(device)
-    target_rot = target_rot.to(device)
+    target_transl_error = target_transl_error.to(device)
+    target_rot_error = target_rot_error.to(device)
 
     optimizer.zero_grad()
     # print(c)
@@ -28,9 +28,24 @@ def train(model, optimizer, rgb_img, refl_img, target_transl, target_rot, c):
     # Translation and rotation euclidean loss
     # Check euclidean distance between error predicted and the real one
     # loss = nn.MSELoss(reduction='none')
+    # t = target_rot_error.cpu()
+    # t = t.detach().numpy()
+    # t_euler = R.from_euler('ZYX', t)
+    # t_euler = t_euler.as_euler('ZYX', degrees=True)
+    #
+    # r = rot_err.cpu()
+    # r = r.detach().numpy()
+    # r_euler = R.from_euler('ZYX', r)
+    # r_euler = r_euler.as_euler('ZYX', degrees=True)
+    #
+    # # print("trasl err: "+str(transl_err) + "target rot:  " + str(target_transl))
+    # print("target rot:  " + str(t_euler))
+    # print("rot err: " + str(r_euler))
 
-    loss_transl = loss(transl_err, target_transl).sum(1).mean()
-    loss_rot = loss(rot_err, target_rot).sum(1).mean()
+
+    loss_transl = loss(transl_err, target_transl_error).sum(1).mean()
+
+    loss_rot = loss(rot_err, target_rot_error).sum(1).mean()
 
     total_loss = torch.add(loss_transl, rescale_param * loss_rot)
 
