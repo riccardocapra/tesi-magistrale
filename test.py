@@ -30,5 +30,5 @@ rot_error = dataset.__getitem__(0)["rot_error"]
 # rot_error = rot_error.cpu()
 rot_error = rot_error.detach().numpy()
 # tra maiuscole e minuscole cambia ordine tasformazioni
-r_euler = R.from_euler('ZYX', rot_error)
-r_euler = r_euler.as_euler('ZYX', degrees=True)
+r_euler = R.from_euler('zyx', rot_error)
+r_euler = r_euler.as_euler('zyx', degrees=True)

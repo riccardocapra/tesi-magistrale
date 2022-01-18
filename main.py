@@ -147,7 +147,8 @@ model = model.to(device)
 # imageTensor2 = imageTensor[:, :1, :, :]
 parameters = filter(lambda p: p.requires_grad, model.parameters())
 optimizer = optim.Adam(parameters, lr=0.00001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-for epoch in range(0, 10):
+epoch_number = 20
+for epoch in range(0, epoch_number):
     print('This is %d-th epoch' % epoch)
     total_train_loss = 0
     local_loss = 0.
@@ -175,13 +176,13 @@ for epoch in range(0, 10):
     #             local_loss += loss_test
     #             c = c+1
     # print("end test")
-    print("total_test_t: "+str(total_test_t))
-    print("total_test_r: "+str(total_test_r))
+    # print("total_test_t: "+str(total_test_t))
+    # print("total_test_r: "+str(total_test_r))
 # save the model
-torch.save(model.state_dict(), "./models/model.pt")
+torch.save(model.state_dict(), "./models/model_"+str(epoch_number)+".pt")
 # test model load
-model = RegNet()
-model.load_state_dict(torch.load("./models/model.pt"))
-model.eval()
+# model = RegNet()
+# model.load_state_dict(torch.load("./models/model.pt"))
+# model.eval()
 
 

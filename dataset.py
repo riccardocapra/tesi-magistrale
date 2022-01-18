@@ -11,6 +11,7 @@ from utils import data_formatter_pcl_single
 import pykitti
 from math import radians
 
+
 class RegnetDataset(Dataset):
     """RegNet dataset."""
 
@@ -74,8 +75,21 @@ class RegnetDataset(Dataset):
     def __getitem__(self, idx):
         rot_error = [0, 0, 0]
         tr_error = [0, 0, 0]
-        z_error = radians(random.randrange(-20, 20))
-        rot_error[0] = z_error
+        z_rot_error = radians(random.randrange(-20, 20))
+        y_rot_error = radians(random.randrange(-20, 20))
+        x_rot_error = radians(random.randrange(-20, 20))
+        rot_error[0] = z_rot_error
+        rot_error[1] = y_rot_error
+        rot_error[2] = x_rot_error
+
+        # m or cm?
+        z_tr_error = radians(random.randrange(-150, 150))
+        y_tr_error = radians(random.randrange(-150, 150))
+        x_tr_error = radians(random.randrange(-150, 150))
+        tr_error[0] = z_tr_error
+        tr_error[1] = y_tr_error
+        tr_error[2] = x_tr_error
+
         depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
 
         # Image have to be resized to
@@ -87,7 +101,7 @@ class RegnetDataset(Dataset):
         # rgb_img_cropped = rgb_img.crop((left, top, right, bottom))
         rgb_img_cropped = rgb_img.crop((0, 0, 1216, 352))
         width, height = rgb_img.size
-        #print(str(width)+" "+str(height))
+        # print(str(width)+" "+str(height))
 
         to_tensor = transforms.ToTensor()
         rgb = to_tensor(rgb_img_cropped)

@@ -25,8 +25,8 @@ def quaternion_distance(q, r):
     q_quat = q_quat.as_quat()
 
     # t = torch.zeros(4).to(device)
-    #rinv = r.clone()
-    #rinv[0] *= -1
+    # rinv = r.clone()
+    # rinv[0] *= -1
     t = r_quat[0]*q_quat[0] - r_quat[1]*q_quat[1] - r_quat[2]*q_quat[2] - r_quat[3]*q_quat[3]
     # t[1] = r[0]*q[1] + r[1]*q[0] - r[2]*q[3] + r[3]*q[2]
     # t[2] = r[0]*q[2] + r[1]*q[3] + r[2]*q[0] - r[3]*q[1]
@@ -81,7 +81,7 @@ def perturbation(h_init, rot_error, tr_error):
     # print("Matrice che genererebbe quei quaternioni:")
     # print(quat_rot_matrix)
 
-    rotation_array = R.from_euler('ZXY', rot_error)
+    rotation_array = R.from_euler('zyx', rot_error)
     # h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
     h_mat = R.from_matrix(cupy.dot(new_h_init[:3, :3], rotation_array.as_matrix()))
     # quat_rot = h_mat.as_quat()
@@ -102,7 +102,7 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     # print("---- VELO_IMAGE "+str(idx)+" FORMATTING BEGUN ---")
     depth = scan_loader(velo_files[idx]).T
     # print(velo_files[idx])
-    # FInd the sequence number in the file name
+    # Find the sequence number in the file name
     sequence = velo_files[idx].split('/')[-3]
     # print(sequence)
     dataset = datasets[sequence]
@@ -144,7 +144,7 @@ def depth_tensor_creation(depth):
 
 
 def scan_loader(file):
-    #print(file)
+    # print(file)
     scan = np.fromfile(file, dtype=np.float32)
     scan = scan.reshape((-1, 4))
     return scan
