@@ -181,6 +181,7 @@ for epoch in range(0, epoch_number):
 # save the model
 print("saving the model...")
 torch.save(model.state_dict(), "./models/model_"+str(epoch_number)+"-epochs.pt")
+print("model saved")
 # test model load
 # model = RegNet()
 # model.load_state_dict(torch.load("./models/model.pt"))
