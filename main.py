@@ -105,7 +105,7 @@ device = torch.device("cuda:1")
 
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = ["00", "05", "06"]
+sequence = ["00", "05", "06", "02", "03"]
 # Set the rando seed used for the permutations
 random.seed(1)
 
@@ -125,7 +125,7 @@ valid_sampler = SubsetRandomSampler(val_indices)
 
 TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                              sampler=train_sampler,
-                                             batch_size=4,
+                                             batch_size=32,
                                              num_workers=4,
                                              drop_last=False,
                                              pin_memory=True)
@@ -179,7 +179,8 @@ for epoch in range(0, epoch_number):
     # print("total_test_t: "+str(total_test_t))
     # print("total_test_r: "+str(total_test_r))
 # save the model
-torch.save(model.state_dict(), "./models/model_"+str(epoch_number)+".pt")
+print("saving the model...")
+torch.save(model.state_dict(), "./models/model_"+str(epoch_number)+"-epochs.pt")
 # test model load
 # model = RegNet()
 # model.load_state_dict(torch.load("./models/model.pt"))
