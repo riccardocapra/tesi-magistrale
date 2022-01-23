@@ -114,4 +114,5 @@ class RegNet(torch.nn.Module):
         rot = F.relu(self.fc1_rot(fused_data))
         transl = self.fc2_transl(transl)
         rot = self.fc2_rot(rot)
+
         return transl, rot

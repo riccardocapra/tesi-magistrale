@@ -100,12 +100,12 @@ parser.add_argument('--loss', default='simple',
                     help='Type of loss used')
 args = parser.parse_args()
 # args.cuda = not args.no_cuda and torch.cuda.is_available()
-
-device = torch.device("cuda:1")
+# gpu +1
+device = torch.device("cuda:0")
 
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = ["00", "05", "06", "02", "03"]
+sequence = ["00", "02", "03", "04", "05", "06"]
 # Set the rando seed used for the permutations
 random.seed(1)
 
@@ -114,7 +114,7 @@ dataset_size = len(dataset)
 # print(dataset.__getitem__(0))
 # imageTensor = dataset.__getitem__(0)["rgb"]
 
-validation_split = .2
+validation_split = 0
 # training_split = .8
 shuffle_dataset = False
 indices = list(range(dataset_size))
@@ -148,18 +148,18 @@ model = model.to(device)
 parameters = filter(lambda p: p.requires_grad, model.parameters())
 optimizer = optim.Adam(parameters, lr=0.00001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 epoch_number = 20
+len_TrainImgLoader = len(TrainImgLoader)
 for epoch in range(0, epoch_number):
     print('This is %d-th epoch' % epoch)
     total_train_loss = 0
     local_loss = 0.
     total_iter = 0
     c = 0
-    tot = len(TrainImgLoader)
     for batch_idx, sample in enumerate(TrainImgLoader):
         loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], c)
         local_loss = local_loss+loss_train
         c = c+1
-        print(str(c)+"/"+str(tot))
+        print(str(c)+"/"+str(len_TrainImgLoader))
 
     print("epoch "+str(epoch)+" loss_train: "+str(local_loss/len(train_sampler)))
 
