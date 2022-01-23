@@ -1,9 +1,9 @@
 from torch.utils.data import Dataset
 import torch
-import pandas as pd
-import os, os.path
-from PIL import Image, ImageMath
-from skimage import io, transform
+# import pandas as pd
+# import os, os.path
+from PIL import Image
+# from skimage import io, transform
 import numpy as np
 import random
 from torchvision import transforms
@@ -51,7 +51,7 @@ class RegnetDataset(Dataset):
         # self.pose_type = pose_type
         # self.transform = transform
 
-    def custom_transform(rgb):
+    def custom_transform(rgb_input):
 
         # Tenere img size originale
         # resize = transforms.Resize((352, 1216))
@@ -65,7 +65,7 @@ class RegnetDataset(Dataset):
         #     brightness = transforms.ColorJitter(brightness=0.4)
         #     rgb = brightness(rgb)
 
-        rgb = to_tensor(rgb)
+        rgb = to_tensor(rgb_input)
         rgb = normalization(rgb)
         return rgb
 
@@ -95,12 +95,8 @@ class RegnetDataset(Dataset):
         # Image have to be resized to
 
         rgb_img = Image.open(self.rgb_files[idx])
-        width, height = rgb_img.size
-        width_difference = width-1216
-        height_difference = height-352
         # rgb_img_cropped = rgb_img.crop((left, top, right, bottom))
         rgb_img_cropped = rgb_img.crop((0, 0, 1216, 352))
-        width, height = rgb_img.size
         # print(str(width)+" "+str(height))
 
         to_tensor = transforms.ToTensor()

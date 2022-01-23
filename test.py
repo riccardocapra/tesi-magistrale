@@ -1,20 +1,20 @@
-import argparse
-import utils
+# import argparse
+# import utils
 from regNet import RegNet
 import torch
 import torch.nn as nn
 from torch.utils.data.sampler import SubsetRandomSampler
-import torch.optim as optim
+# import torch.optim as optim
 from dataset import RegnetDataset
 import numpy as np
-import math
+# import math
 import random
 # import pykitti
 from scipy.spatial.transform import Rotation as R
 
 
-def test(model, rgb_img, refl_img, target_transl, target_rot):
-    model.eval()
+def test(test_model, rgb_img, refl_img, target_transl, target_rot):
+    test_model.eval()
     rgb = rgb_img.to(device)
     lidar = refl_img.to(device)
     target_transl = target_transl.to(device)
@@ -28,7 +28,7 @@ def test(model, rgb_img, refl_img, target_transl, target_rot):
 
     # Run model disabling learning
     with torch.no_grad():
-        transl_err, rot_err = model(rgb, lidar)
+        transl_err, rot_err = test_model(rgb, lidar)
 
     # Translation and rotation euclidean loss
     # Sum errors computed with the input pose and check the distance with the target one
@@ -48,19 +48,20 @@ def test(model, rgb_img, refl_img, target_transl, target_rot):
     target_rot_euler = target_rot_euler.as_euler('zxy', degrees=True)
     print("rot target: ", target_rot_euler)
 
-    loss_transl = loss(transl_err, target_transl).sum(1).mean()
+    loss_transl_test = loss(transl_err, target_transl).sum(1).mean()
 
-    loss_rot = loss(rot_err, target_rot).sum(1).mean()
+    loss_rot_test = loss(rot_err, target_rot).sum(1).mean()
 
-    total_loss = torch.add(loss_transl, rescale_param * loss_rot)
+    total_loss_test = torch.add(loss_transl_test, rescale_param * loss_rot_test)
 
-    total_trasl_error = 0.0
-    total_rot_error = 0.0
-    for j in range(rgb.shape[0]):
-        total_trasl_error += torch.norm(target_transl[j] - transl_err[j]) * 100.
-        total_rot_error += utils.quaternion_distance(target_rot[j], rot_err[j])
+    # total_trasl_error = 0.0
+    # total_rot_error = 0.0
+    # for j in range(rgb.shape[0]):
+    #     total_trasl_error += torch.norm(target_transl[j] - transl_err[j]) * 100.
+    #     total_rot_error += utils.quaternion_distance(target_rot[j], rot_err[j])
 
-    return total_loss.item(), total_trasl_error.item(), total_rot_error, rot_err
+    # return total_loss.item(), total_trasl_error.item(), total_rot_error, rot_err
+    return total_loss_test.item(), loss_rot_test
 
 
 # Specify the dataset to load
@@ -97,7 +98,6 @@ valid_sampler = SubsetRandomSampler(val_indices)
 
 
 TestImgLoader = torch.utils.data.DataLoader(dataset=dataset,
-                                            sampler=valid_sampler,
                                             shuffle=True,
                                             batch_size=32,
                                             num_workers=4,
@@ -111,12 +111,9 @@ c = 0
 local_loss = 0.0
 len_TestImgLoader = len(TestImgLoader)
 for batch_idx, sample in enumerate(TestImgLoader):
-            loss_test, trasl_e, total_rot_error, rot_error = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
-            total_test_t += trasl_e
-            total_test_r += total_rot_error
-            local_loss += loss_test
-            c = c+1
-            print(str(c) + "/" + str(len_TestImgLoader))
+    total_loss, loss_rot = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+    c = c+1
+    print(str(c) + "/" + str(len_TestImgLoader))
 
 # print("end test")
 # print(rot_error)
