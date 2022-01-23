@@ -82,13 +82,13 @@ class RegnetDataset(Dataset):
         rot_error[1] = y_rot_error
         rot_error[2] = x_rot_error
 
-        # m or cm?
-        z_tr_error = radians(random.randrange(-150, 150))
-        y_tr_error = radians(random.randrange(-150, 150))
-        x_tr_error = radians(random.randrange(-150, 150))
-        tr_error[0] = z_tr_error
-        tr_error[1] = y_tr_error
-        tr_error[2] = x_tr_error
+        # # m or cm?
+        # z_tr_error = radians(random.randrange(-150, 150))
+        # y_tr_error = radians(random.randrange(-150, 150))
+        # x_tr_error = radians(random.randrange(-150, 150))
+        # tr_error[0] = z_tr_error
+        # tr_error[1] = y_tr_error
+        # tr_error[2] = x_tr_error
 
         depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
 

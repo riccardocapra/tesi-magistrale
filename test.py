@@ -34,7 +34,22 @@ def test(model, rgb_img, refl_img, target_transl, target_rot):
     # Sum errors computed with the input pose and check the distance with the target one
     loss = nn.MSELoss(reduction='none')
 
+    # The following code is used to show the expected rotation vs the computed ones
+
+    rot_err_np = rot_err.cpu()
+    rot_err_np = rot_err_np.numpy()
+    rot_err_euler = R.from_euler('zyx', rot_err_np)
+    rot_err_euler = rot_err_euler.as_euler('zxy', degrees=True)
+    print("rot err: ", rot_err_euler)
+
+    target_rot_np = target_rot.cpu()
+    target_rot_np = target_rot_np.numpy()
+    target_rot_euler = R.from_euler('zyx', target_rot_np)
+    target_rot_euler = target_rot_euler.as_euler('zxy', degrees=True)
+    print("rot target: ", target_rot_euler)
+
     loss_transl = loss(transl_err, target_transl).sum(1).mean()
+
     loss_rot = loss(rot_err, target_rot).sum(1).mean()
 
     total_loss = torch.add(loss_transl, rescale_param * loss_rot)
@@ -50,7 +65,7 @@ def test(model, rgb_img, refl_img, target_transl, target_rot):
 
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = ["07", "08", "09"]
+sequence = ["08", "09"]
 rescale_param = 751.0
 # Set the random seed used for the permutations
 random.seed(1)
@@ -58,7 +73,7 @@ random.seed(1)
 # echo $CUDA_VISIBLE_DEVICES
 # 2
 
-print('torch device', torch.cuda.current_device(),torch.cuda.device(0),torch.cuda.device_count())
+print('torch device', torch.cuda.current_device(), torch.cuda.device(0), torch.cuda.device_count())
 device = torch.device('cuda:0')
 
 print("begin test")
@@ -72,7 +87,7 @@ dataset = RegnetDataset(basedir, sequence)
 dataset_size = len(dataset)
 
 
-validation_split = 1
+validation_split = .9
 # training_split = .8
 shuffle_dataset = False
 indices = list(range(dataset_size))
@@ -83,6 +98,7 @@ valid_sampler = SubsetRandomSampler(val_indices)
 
 TestImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                             sampler=valid_sampler,
+                                            shuffle=True,
                                             batch_size=32,
                                             num_workers=4,
                                             drop_last=False,
@@ -102,11 +118,11 @@ for batch_idx, sample in enumerate(TestImgLoader):
             c = c+1
             print(str(c) + "/" + str(len_TestImgLoader))
 
-print("end test")
-print(rot_error)
-print("loss: "+str(loss_test/len_TestImgLoader))
-print("total_test_t: "+str(total_test_t))
-print("total_test_r: "+str(total_test_r))
+# print("end test")
+# print(rot_error)
+# print("loss: "+str(loss_test/len_TestImgLoader))
+# print("total_test_t: "+str(total_test_t))
+# print("total_test_r: "+str(total_test_r))
 
 
 print("end test 2")
