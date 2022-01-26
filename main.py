@@ -6,8 +6,9 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import torch.optim as optim
 from dataset import RegnetDataset
 import numpy as np
-# import utils
 import random
+import wandb
+# import utils
 # import pykitti
 # from scipy.spatial.transform import Rotation as R
 
@@ -41,6 +42,7 @@ def train(train_model, train_optimizer, rgb_img, refl_img, target_transl_error, 
     # # print("trasl err: "+str(transl_err) + "target rot:  " + str(target_transl))
     # print("target rot:  " + str(t_euler))
     # print("rot err: " + str(r_euler))
+
     loss = nn.MSELoss(reduction='none')
 
     loss_transl = loss(transl_err, target_transl_error).sum(1).mean()
@@ -56,6 +58,8 @@ def train(train_model, train_optimizer, rgb_img, refl_img, target_transl_error, 
     return total_loss.item()
 
 
+wandb.init(project="thesis-project", entity="capra")
+
 parser = argparse.ArgumentParser(description='RegNet')
 parser.add_argument('--loss', default='simple',
                     help='Type of loss used')
@@ -66,9 +70,15 @@ device = torch.device("cuda:0")
 
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = ["00", "02", "03", "04", "05", "06", "07"]
+
+# sequence = ["00", "02", "03", "04", "05", "06", "07"]
+sequence = ["00"]
 # Set the rando seed used for the permutations
 random.seed(1)
+epoch_number = 1
+learning_ratio = 0.00001
+batch_size = 32
+rescale_param = 751.0
 
 dataset = RegnetDataset(basedir, sequence)
 dataset_size = len(dataset)
@@ -76,7 +86,7 @@ print("Saranno considerate ", dataset_size, " coppie pcl-immgine.")
 # print(dataset.__getitem__(0))
 # imageTensor = dataset.__getitem__(0)["rgb"]
 
-validation_split = 0
+validation_split = 0.9
 # training_split = .8
 shuffle_dataset = False
 indices = list(range(dataset_size))
@@ -87,7 +97,7 @@ valid_sampler = SubsetRandomSampler(val_indices)
 
 TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                              shuffle=True,
-                                             batch_size=32,
+                                             batch_size=batch_size,
                                              num_workers=4,
                                              drop_last=False,
                                              pin_memory=True)
@@ -95,15 +105,23 @@ TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset,
 # print(len(TrainImgLoader))
 # print(len(TestImgLoader))
 
-rescale_param = 751.0
+len_TrainImgLoader = len(TrainImgLoader)
+
 
 model = RegNet()
 model = model.to(device)
 # imageTensor2 = imageTensor[:, :1, :, :]
 parameters = filter(lambda p: p.requires_grad, model.parameters())
-optimizer = optim.Adam(parameters, lr=0.00001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-epoch_number = 100
-len_TrainImgLoader = len(TrainImgLoader)
+
+
+optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+
+wandb.config = {
+  "learning_rate": learning_ratio,
+  "epochs": epoch_number,
+  "batch_size": batch_size
+}
+
 for epoch in range(0, epoch_number):
     print('This is %d-th epoch' % epoch)
     total_train_loss = 0
@@ -114,7 +132,8 @@ for epoch in range(0, epoch_number):
         loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
         local_loss = local_loss+loss_train
         c = c+1
-        print(str(c)+"/"+str(len_TrainImgLoader))
+        wandb.log({"loss training": loss_train})
+        print(str(c)+"/"+str(len_TrainImgLoader)+" epoch:"+str(epoch))
 
     print("epoch "+str(epoch)+" loss_train: "+str(local_loss/len(train_sampler)))
 

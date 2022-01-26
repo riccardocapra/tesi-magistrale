@@ -97,6 +97,13 @@ def perturbation(h_init, rot_error, tr_error):
     return new_h_init
 
 
+def scan_loader(file):
+    # print(file)
+    scan = np.fromfile(file, dtype=np.float32)
+    scan = scan.reshape((-1, 4))
+    return scan
+
+
 def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     cupy.cuda.Device(2)
     # print("---- VELO_IMAGE "+str(idx)+" FORMATTING BEGUN ---")
@@ -126,10 +133,3 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     to_tensor = transforms.ToTensor()
     depth_image_tensor = to_tensor(depth_image_p)
     return depth_image_tensor
-
-
-def scan_loader(file):
-    # print(file)
-    scan = np.fromfile(file, dtype=np.float32)
-    scan = scan.reshape((-1, 4))
-    return scan
