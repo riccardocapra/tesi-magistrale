@@ -58,7 +58,7 @@ def train(train_model, train_optimizer, rgb_img, refl_img, target_transl_error, 
     return total_loss.item()
 
 
-wandb.init(project="thesis-project", entity="capra")
+wandb.init(project="thesis-project_train", entity="capra")
 
 parser = argparse.ArgumentParser(description='RegNet')
 parser.add_argument('--loss', default='simple',
@@ -117,9 +117,10 @@ parameters = filter(lambda p: p.requires_grad, model.parameters())
 optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
 wandb.config = {
-  "learning_rate": learning_ratio,
-  "epochs": epoch_number,
-  "batch_size": batch_size
+    "learning_rate": learning_ratio,
+    "epochs": epoch_number,
+    "batch_size": batch_size,
+    "sample_quantity": dataset_size
 }
 
 for epoch in range(0, epoch_number):

@@ -11,6 +11,7 @@ import numpy as np
 import random
 # import pykitti
 from scipy.spatial.transform import Rotation as R
+import wandb
 
 
 def test(test_model, rgb_img, refl_img, target_transl, target_rot):
@@ -67,15 +68,30 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot):
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
 sequence = ["08", "09"]
-rescale_param = 751.0
+dataset = RegnetDataset(basedir, sequence)
+# print('torch device', torch.cuda.current_device(), torch.cuda.device(0), torch.cuda.device_count())
+device = torch.device('cuda:0')
 # Set the random seed used for the permutations
 random.seed(1)
+epoch_number = 1
+learning_ratio = 0.00001
+batch_size = 32
+rescale_param = 751.0
+dataset_size = len(dataset)
 # export CUDA_VISIBLE_DEVICES=2
 # echo $CUDA_VISIBLE_DEVICES
 # 2
 
-print('torch device', torch.cuda.current_device(), torch.cuda.device(0), torch.cuda.device_count())
-device = torch.device('cuda:0')
+wandb.init(project="thesis-project_test", entity="capra")
+wandb.run.name = "test run"
+wandb.config = {
+    "learning_rate": learning_ratio,
+    "epochs": epoch_number,
+    "batch_size": batch_size,
+    "sample_quantity": dataset_size
+}
+
+
 
 print("begin test")
 
@@ -84,8 +100,8 @@ model = RegNet()
 model = model.to(device)
 model.load_state_dict(torch.load("./models/model_20-epochs.pt", map_location='cuda:0'))
 model.eval()
-dataset = RegnetDataset(basedir, sequence)
-dataset_size = len(dataset)
+
+
 
 
 validation_split = .9
@@ -99,7 +115,7 @@ valid_sampler = SubsetRandomSampler(val_indices)
 
 TestImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                             shuffle=True,
-                                            batch_size=32,
+                                            batch_size=batch_size,
                                             num_workers=4,
                                             drop_last=False,
                                             pin_memory=True)
@@ -113,6 +129,8 @@ len_TestImgLoader = len(TestImgLoader)
 for batch_idx, sample in enumerate(TestImgLoader):
     total_loss, loss_rot = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
     c = c+1
+    wandb.log({"total loss test": total_loss}, step=10)
+    wandb.log({"loss rot test": loss_rot}, step=10)
     print(str(c) + "/" + str(len_TestImgLoader))
 
 # print("end test")
