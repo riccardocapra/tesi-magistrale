@@ -128,6 +128,7 @@ for epoch in range(0, epoch_number):
     total_train_loss = 0
     local_loss = 0.
     total_iter = 0
+    best_loss = 0
     c = 0
     for batch_idx, sample in enumerate(TrainImgLoader):
         loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
@@ -137,6 +138,14 @@ for epoch in range(0, epoch_number):
         print(str(c)+"/"+str(len_TrainImgLoader)+" epoch:"+str(epoch))
 
     print("epoch "+str(epoch)+" loss_train: "+str(local_loss/len(train_sampler)))
+    if epoch == 0:
+        best_loss = local_loss
+    if local_loss <= best_loss:
+        torch.save({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+        }, "./models/partial_model_epoch-"+str(epoch_number)+".pt")
+        best_loss=local_loss
 
 # save the model
 print("saving the model...")

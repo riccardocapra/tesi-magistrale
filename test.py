@@ -41,13 +41,13 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot):
     rot_err_np = rot_err_np.numpy()
     rot_err_euler = R.from_euler('zyx', rot_err_np)
     rot_err_euler = rot_err_euler.as_euler('zxy', degrees=True)
-    print("rot err: ", rot_err_euler)
+    # print("rot err: ", rot_err_euler)
 
     target_rot_np = target_rot.cpu()
     target_rot_np = target_rot_np.numpy()
     target_rot_euler = R.from_euler('zyx', target_rot_np)
     target_rot_euler = target_rot_euler.as_euler('zxy', degrees=True)
-    print("rot target: ", target_rot_euler)
+    # print("rot target: ", target_rot_euler)
 
     loss_transl_test = loss(transl_err, target_transl).sum(1).mean()
 
@@ -62,7 +62,9 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot):
     #     total_rot_error += utils.quaternion_distance(target_rot[j], rot_err[j])
 
     # return total_loss.item(), total_trasl_error.item(), total_rot_error, rot_err
-    return total_loss_test.item(), loss_rot_test
+    test_comparator = [target_rot_euler, rot_err_euler]
+
+    return total_loss_test.item(), loss_rot_test, test_comparator
 
 
 # Specify the dataset to load
@@ -91,8 +93,6 @@ wandb.config = {
     "sample_quantity": dataset_size
 }
 
-
-
 print("begin test")
 
 # test model load
@@ -100,9 +100,6 @@ model = RegNet()
 model = model.to(device)
 model.load_state_dict(torch.load("./models/model_20-epochs.pt", map_location='cuda:0'))
 model.eval()
-
-
-
 
 validation_split = .9
 # training_split = .8
@@ -127,10 +124,21 @@ c = 0
 local_loss = 0.0
 len_TestImgLoader = len(TestImgLoader)
 for batch_idx, sample in enumerate(TestImgLoader):
-    total_loss, loss_rot = test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+    total_loss, loss_rot, comparator = test(model, sample['rgb'], sample['lidar'], sample['tr_error'],
+                                                      sample['rot_error'])
+
+    for i in range(comparator[0].shape[0]):
+        a = abs(comparator[0][i][0] - comparator[1][i][0])
+        wandb.log({"z-axis rotation error": a})
+        a = abs(comparator[0][i][1] - comparator[1][i][1])
+        wandb.log({"y-axis rotation error": a})
+        a = abs(comparator[0][i][2] - comparator[1][i][2])
+        wandb.log({"x-axis rotation error": a})
+
     c = c+1
-    wandb.log({"total loss test": total_loss}, step=10)
-    wandb.log({"loss rot test": loss_rot}, step=10)
+    if c % 10 == 0:
+        wandb.log({"total loss test": total_loss})
+        wandb.log({"loss rot test": loss_rot})
     print(str(c) + "/" + str(len_TestImgLoader))
 
 # print("end test")
