@@ -75,20 +75,13 @@ class RegnetDataset(Dataset):
     def __getitem__(self, idx):
         rot_error = [0, 0, 0]
         tr_error = [0, 0, 0]
-        z_rot_error = radians(random.randrange(-20, 20))
-        y_rot_error = radians(random.randrange(-20, 20))
-        x_rot_error = radians(random.randrange(-20, 20))
-        rot_error[0] = z_rot_error
-        rot_error[1] = y_rot_error
-        rot_error[2] = x_rot_error
+        rot_error[0] = radians(random.randrange(-20, 20))
+        rot_error[1] = radians(random.randrange(-20, 20))
+        rot_error[2] = radians(random.randrange(-20, 20))
 
-        # # m or cm?
-        # z_tr_error = radians(random.randrange(-150, 150))
-        # y_tr_error = radians(random.randrange(-150, 150))
-        # x_tr_error = radians(random.randrange(-150, 150))
-        # tr_error[0] = z_tr_error
-        # tr_error[1] = y_tr_error
-        # tr_error[2] = x_tr_error
+        tr_error[0] = random.randrange(-150, 150)
+        tr_error[1] = random.randrange(-150, 150)
+        tr_error[2] = random.randrange(-150, 150)
 
         depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
 

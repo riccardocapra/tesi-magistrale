@@ -12,7 +12,7 @@ import random
 # import pykitti
 from scipy.spatial.transform import Rotation as R
 import wandb
-
+import torch.optim as optim
 
 def test(test_model, rgb_img, refl_img, target_transl, target_rot):
     test_model.eval()
@@ -33,7 +33,7 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot):
 
     # Translation and rotation euclidean loss
     # Sum errors computed with the input pose and check the distance with the target one
-    loss = nn.MSELoss(reduction='none')
+    loss_test = nn.MSELoss(reduction='none')
 
     # The following code is used to show the expected rotation vs the computed ones
 
@@ -49,9 +49,9 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot):
     target_rot_euler = target_rot_euler.as_euler('zxy', degrees=True)
     # print("rot target: ", target_rot_euler)
 
-    loss_transl_test = loss(transl_err, target_transl).sum(1).mean()
+    loss_transl_test = loss_test(transl_err, target_transl).sum(1).mean()
 
-    loss_rot_test = loss(rot_err, target_rot).sum(1).mean()
+    loss_rot_test = loss_test(rot_err, target_rot).sum(1).mean()
 
     total_loss_test = torch.add(loss_transl_test, rescale_param * loss_rot_test)
 
@@ -72,7 +72,7 @@ basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
 sequence = ["08", "09"]
 dataset = RegnetDataset(basedir, sequence)
 # print('torch device', torch.cuda.current_device(), torch.cuda.device(0), torch.cuda.device_count())
-device = torch.device('cuda:0')
+device = torch.device('cuda:1')
 # Set the random seed used for the permutations
 random.seed(1)
 epoch_number = 1
@@ -93,12 +93,19 @@ wandb.config = {
     "sample_quantity": dataset_size
 }
 
-print("begin test")
+print("begin test 2")
 
 # test model load
 model = RegNet()
 model = model.to(device)
-model.load_state_dict(torch.load("./models/model_20-epochs.pt", map_location='cuda:0'))
+parameters = filter(lambda p: p.requires_grad, model.parameters())
+optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+# model.load_state_dict(torch.load("./models/model_20-epochs.pt", map_location='cuda:0'))
+checkpoint = torch.load("./models/partial_model_epoch-40.pt", map_location='cuda:0')
+model.load_state_dict(checkpoint['model_state_dict'])
+optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+epoch = checkpoint['epoch']
+loss = checkpoint['loss']
 model.eval()
 
 validation_split = .9

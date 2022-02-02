@@ -4,6 +4,7 @@
     <list>
       <list>
         <remote-mappings server-id="python@sftp://capra@149.132.176.95:22/home/capra/.conda/envs/capra/bin/python" />
+        <remote-mappings server-id="python@sftp://capra@149.132.176.95:22/home/capra/.conda/envs/capra-tesi/bin/python" />
       </list>
     </list>
   </component>

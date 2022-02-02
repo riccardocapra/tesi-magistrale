@@ -2,12 +2,12 @@
 import numpy as np
 # import torch
 from torchvision import transforms
-from PIL import Image
+# from PIL import Image
 # import cv2
 from datetime import datetime
 from scipy.spatial.transform import Rotation as R
 import cupy
-import multiprocessing
+# import multiprocessing
 import math
 # from os import getpid
 # import os
@@ -68,30 +68,12 @@ def depth_image_creation(depth, h, w):
 def perturbation(h_init, rot_error, tr_error):
     cupy.cuda.Device(2)
     new_h_init = np.copy(h_init)
-    # print("Rotazione matrice originale:")
-    # print(new_h_init[:3, :3])
-    # H_init[:2, 3] += p_factor
-    # extract roll, pitch and yaw
-    # h_mat = R.from_matrix(new_h_init[:3, :3])
-    # quat_rot = h_mat.as_quat()
-    # print("Quaternioni originali:")
-    # print(quat_rot)
-
-    # quat_rot_matrix = R.from_quat(quat_rot).as_matrix()
-    # print("Matrice che genererebbe quei quaternioni:")
-    # print(quat_rot_matrix)
-
     rotation_array = R.from_euler('zyx', rot_error)
-    # h_mat = R.from_matrix(new_h_init[:3, :3].dot(rotation_array.as_matrix()))
-    h_mat = R.from_matrix(cupy.dot(new_h_init[:3, :3], rotation_array.as_matrix()))
-    # quat_rot = h_mat.as_quat()
-    # print("Quaternioni della matrice che ruoterà H:")
-    # print(quat_rot)
-
-    # print("h_mat ruotata:")
-    # print(h_mat.as_matrix())
-    # r = R.from_rotvec(r.apply(rotation_array))
-    new_h_init[:3, :3] = h_mat.as_matrix()
+    # h_mat = R.from_matrix(cupy.dot(new_h_init[:3, :3], rotation_array.as_matrix()))
+    # new_h_init[:3, :3] = h_mat.as_matrix()
+    new_h_init[:3, :3] = cupy.dot(rotation_array.as_matrix(), new_h_init[:3, :3])
+    new_h_init[:3, 3] = tr_error
+    new_h_init[3,3] = 1
     # print("Rotazione della nuova matrice H che la fz ritorna:")
     # print(new_h_init[:3, :3])
     return new_h_init
