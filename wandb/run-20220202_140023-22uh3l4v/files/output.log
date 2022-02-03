@@ -1,0 +1,93 @@
+
+Saranno considerate per il training  15237  coppie pcl-immgine. Le epoche sono  1
+This is 0-th epoch
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+Traceback (most recent call last):
+  File "/tmp/pycharm_project_450/main.py", line 191, in <module>
+    for batch_idx, sample in enumerate(TrainImgLoader):
+  File "/home/capra/.conda/envs/capra-tesi/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 521, in __next__
+    data = self._next_data()
+  File "/home/capra/.conda/envs/capra-tesi/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1186, in _next_data
+    idx, data = self._get_data()
+  File "/home/capra/.conda/envs/capra-tesi/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1142, in _get_data
+    success, data = self._try_get_data()
+  File "/home/capra/.conda/envs/capra-tesi/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 990, in _try_get_data
+    data = self._data_queue.get(timeout=timeout)
+  File "/home/capra/.conda/envs/capra-tesi/lib/python3.9/queue.py", line 180, in get
+    self.not_empty.wait(remaining)
+  File "/home/capra/.conda/envs/capra-tesi/lib/python3.9/threading.py", line 316, in wait
+    gotit = waiter.acquire(True, timeout)
+KeyboardInterrupt
+edit
+edit
+edit
+edit
+edit
+edit
+edit
+edit

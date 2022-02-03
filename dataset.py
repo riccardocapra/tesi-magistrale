@@ -79,9 +79,9 @@ class RegnetDataset(Dataset):
         rot_error[1] = radians(random.randrange(-20, 20))
         rot_error[2] = radians(random.randrange(-20, 20))
 
-        tr_error[0] = random.randrange(-150, 150)
-        tr_error[1] = random.randrange(-150, 150)
-        tr_error[2] = random.randrange(-150, 150)
+        tr_error[0] = random.randrange(-150, 150)/100
+        tr_error[1] = random.randrange(-150, 150)/100
+        tr_error[2] = random.randrange(-150, 150)/100
 
         depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
 

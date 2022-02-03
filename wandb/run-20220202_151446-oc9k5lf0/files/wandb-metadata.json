@@ -1,0 +1,18 @@
+{
+    "os": "Linux-4.15.0-142-generic-x86_64-with-glibc2.23",
+    "python": "3.9.7",
+    "heartbeatAt": "2022-02-02T14:14:47.767436",
+    "startedAt": "2022-02-02T14:14:46.809228",
+    "docker": null,
+    "gpu": "GeForce GTX 1080 Ti",
+    "gpu_count": 4,
+    "cpu_count": 12,
+    "cuda": "10.1.105",
+    "args": [],
+    "state": "running",
+    "program": "/tmp/pycharm_project_450/main.py",
+    "codePath": "main.py",
+    "host": "i7g4",
+    "username": "capra",
+    "executable": "/home/capra/.conda/envs/capra-tesi/bin/python"
+}

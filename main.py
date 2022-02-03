@@ -183,13 +183,13 @@ for epoch in range(0, epoch_number):
         c = c+1
         pbar_train.update(1)
         # print("training "+str(c)+"/"+str(len_TrainImgLoader)+" epoch:"+str(epoch))
-
+    pbar_train.close()
     wandb.log({"loss training": total_loss_train/len_TrainImgLoader})
     print("epoch "+str(epoch)+" loss_train: "+str(total_loss_train/len_TrainImgLoader))
-    pbar_train.close()
+
     ## Test ##
 
-    pbar_test = tqdm(total=len_TrainImgLoader)
+    pbar_test = tqdm(total=len_TestImgLoader)
     total_loss_test = 0.
     total_loss_rot_test = 0.
     total_loss_transl_test = 0
