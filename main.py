@@ -116,7 +116,7 @@ dataset_test = RegnetDataset(basedir, sequence_test)
 # sequence = ["00"]
 # Set the rando seed used for the permutations
 random.seed(1)
-epoch_number = 10
+epoch_number = 50
 learning_ratio = 0.00001
 batch_size = 32
 rescale_param = 751.0
@@ -172,27 +172,27 @@ for epoch in range(0, epoch_number):
     pbar_train = tqdm(total=len_TrainImgLoader)
 
     loss_train = 0
-    total_loss_train = 0.
+    total_loss = 0.
     # total_iter = 0
     best_loss = 0
     c = 0
     for batch_idx, sample in enumerate(TrainImgLoader):
         loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
-        total_loss_train+= loss_train
+        total_loss+= loss_train
         # local_loss_train = total_iter+loss_train
         c = c+1
         pbar_train.update(1)
         # print("training "+str(c)+"/"+str(len_TrainImgLoader)+" epoch:"+str(epoch))
     pbar_train.close()
-    wandb.log({"loss training": total_loss_train/len_TrainImgLoader})
-    print("epoch "+str(epoch)+" loss_train: "+str(total_loss_train/len_TrainImgLoader))
+    wandb.log({"loss training": total_loss/len_TrainImgLoader})
+    print("epoch "+str(epoch)+" loss_train: "+str(total_loss/len_TrainImgLoader))
 
     ## Test ##
 
     pbar_test = tqdm(total=len_TestImgLoader)
-    total_loss_test = 0.
-    total_loss_rot_test = 0.
-    total_loss_transl_test = 0
+    total_loss = 0.
+    total_loss_rot = 0.
+    total_loss_transl = 0
     total_test_t = 0.
     total_test_r = 0.
 
@@ -200,10 +200,11 @@ for epoch in range(0, epoch_number):
 
     c = 0
     for batch_idx, sample in enumerate(TestImgLoader):
-        total_loss_test, loss_rot_test, loss_transl_test, rot_comparator, tr_comparator = test(model, sample['rgb'], sample['lidar'], sample['tr_error'],
+        test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator = test(model, sample['rgb'], sample['lidar'], sample['tr_error'],
                                                 sample['rot_error'])
-        total_loss_rot_test +=loss_rot_test
-        total_loss_transl_test +=loss_transl_test
+        total_loss+=test_loss
+        total_loss_rot +=loss_rot
+        total_loss_transl +=loss_transl
         for i in range(rot_comparator[0].shape[0]):
             wandb.log({"z-axis rotation error": abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
             wandb.log({"y-axis rotation error": abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
@@ -214,26 +215,26 @@ for epoch in range(0, epoch_number):
             wandb.log({"x-axis translation error":  abs(tr_comparator[0][i][2] - tr_comparator[1][i][2])})
         c = c + 1
         pbar_test.update(1)
-        if c % 10 == 0:
-            wandb.log({"loss trasl test": loss_transl_test})
-            wandb.log({"loss rot test": loss_rot_test})
+        # if c % 10 == 0:
+        #     wandb.log({"loss trasl test": loss_transl})
+        #     wandb.log({"loss rot test": loss_rot})
         # print("testing" + str(c) + "/" + str(len_TestImgLoader))
     pbar_test.close()
-    wandb.log({"total loss test": total_loss_test / len_TestImgLoader})
-    wandb.log({"loss rot test": total_loss_rot_test / len_TestImgLoader})
-    wandb.log({"loss trasl test": total_loss_transl_test / len_TestImgLoader})
+    wandb.log({"total loss test": total_loss / len_TestImgLoader})
+    wandb.log({"loss rot test": total_loss_rot / len_TestImgLoader})
+    wandb.log({"loss trasl test": total_loss_transl / len_TestImgLoader})
 
     if epoch == 0:
-        best_loss = total_loss_test / len_TestImgLoader
+        best_loss = total_loss / len_TestImgLoader
     if loss_train <= best_loss:
         print("Salvato modello nuovo migliore del precedente.")
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'loss':total_loss_test / len_TestImgLoader,
+            'loss':total_loss / len_TestImgLoader,
         }, "./models/partial_model_epoch-"+str(epoch)+".pt")
-        best_loss=total_loss_test / len_TestImgLoader
+        best_loss=total_loss / len_TestImgLoader
 
 # save the model
 print("saving the model...")
