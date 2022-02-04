@@ -227,14 +227,14 @@ for epoch in range(0, epoch_number):
 
     if epoch == 0:
         best_loss = total_loss / len_TestImgLoader
-    if loss_train <= best_loss:
+    if total_loss <= best_loss:
         print("Salvato modello nuovo migliore del precedente.")
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss':total_loss / len_TestImgLoader,
-        }, "./models/partial_model_epoch-"+str(epoch)+".pt")
+        }, "./models/partial_model_epoch.pt")
         best_loss=total_loss / len_TestImgLoader
 
 # save the model
