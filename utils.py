@@ -36,16 +36,17 @@ def quaternion_distance(q, r):
     return dist
 
 
-def pcl_rt(depth_pts, H, K):
-    cupy.cuda.Device(2)
-    # depth = H.dot(depth_pts)
-    depth = cupy.dot(H, depth_pts)
-    depth = depth.T
-    depth = depth[depth[:, 2] > 0]
-    depth = K @ depth[:, :3].T
-    depth[0] = (depth[0] / depth[2]).astype(int)
-    depth[1] = (depth[1] / depth[2]).astype(int)
-    return depth
+def pcl_rt(depth_pts, cam_to_velo, camera_matrix):
+    depth_pts[3] = np.ones(depth_pts.shape[1])
+    depth_pt = cupy.dot(cam_to_velo, depth_pts)
+    # rimuovere le x<0?
+    # depth = depth[depth[:, 2] > 0]
+    # creo una riga di uni da agganciare ai punti per moltiplicarli omogeneamente
+
+    depth_pt = cupy.dot(camera_matrix, depth_pt[:3, :])
+    depth_pt[0] = (depth_pt[0] / depth_pt[2]).astype(int)
+    depth_pt[1] = (depth_pt[1] / depth_pt[2]).astype(int)
+    return depth_pt
 
 
 def depth_image_creation(depth, h, w):
@@ -72,7 +73,7 @@ def perturbation(h_init, rot_error, tr_error):
     # h_mat = R.from_matrix(cupy.dot(new_h_init[:3, :3], rotation_array.as_matrix()))
     # new_h_init[:3, :3] = h_mat.as_matrix()
     new_h_init[:3, :3] = cupy.dot(rotation_array.as_matrix(), new_h_init[:3, :3])
-    new_h_init[:3, 3] = tr_error
+    new_h_init[:3, 3] += tr_error
     new_h_init[3,3] = 1
     # print("Rotazione della nuova matrice H che la fz ritorna:")
     # print(new_h_init[:3, :3])
@@ -98,9 +99,9 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     # print(path[-1])
     # depth = dataset.get_velo(idx).T
     h_init = np.copy(dataset.calib.T_cam2_velo)
-    depth_n = pcl_rt(depth, h_init, dataset.calib.K_cam2)
+    # depth_n = pcl_rt(depth, h_init, dataset.calib.K_cam2)
     h, w = 352, 1216
-    depth_image = depth_image_creation(depth_n, h, w)
+    # depth_image = depth_image_creation(depth_n, h, w)
     # cv2.imwrite('Original.jpeg', depth_image)
 
     # perturbation_vector = [0, 0, 45]

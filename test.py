@@ -84,14 +84,7 @@ dataset_size = len(dataset)
 # echo $CUDA_VISIBLE_DEVICES
 # 2
 
-wandb.init(project="thesis-project_test", entity="capra")
-wandb.run.name = "test run"
-wandb.config = {
-    "learning_rate": learning_ratio,
-    "epochs": epoch_number,
-    "batch_size": batch_size,
-    "sample_quantity": dataset_size
-}
+
 
 print("begin test 2")
 
@@ -108,14 +101,14 @@ epoch = checkpoint['epoch']
 loss = checkpoint['loss']
 model.eval()
 
-validation_split = .9
-# training_split = .8
-shuffle_dataset = False
-indices = list(range(dataset_size))
-split = int(np.floor(validation_split * dataset_size))
-train_indices, val_indices = indices[split:], indices[:split]
-valid_sampler = SubsetRandomSampler(val_indices)
-
+wandb.init(project="thesis-project_test", entity="capra")
+wandb.run.name = "test from epoch:"+str(epoch)
+wandb.config = {
+    "learning_rate": learning_ratio,
+    "epochs": epoch_number,
+    "batch_size": batch_size,
+    "sample_quantity": dataset_size
+}
 
 TestImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                             shuffle=True,

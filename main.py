@@ -119,7 +119,8 @@ random.seed(1)
 epoch_number = 50
 learning_ratio = 0.00001
 batch_size = 32
-rescale_param = 751.0
+# rescale_param = 751.0
+rescale_param = 1.
 
 
 dataset_train_size = len(dataset_train)
@@ -149,7 +150,7 @@ TestImgLoader = torch.utils.data.DataLoader(dataset=dataset_test,
 len_TrainImgLoader = len(TrainImgLoader)
 len_TestImgLoader = len(TestImgLoader)
 # gpu +1
-device = torch.device("cuda:0")
+device = torch.device("cuda:1")
 model = RegNet()
 model = model.to(device)
 # imageTensor2 = imageTensor[:, :1, :, :]
