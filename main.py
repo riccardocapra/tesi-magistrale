@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data.sampler import SubsetRandomSampler
 import torch.optim as optim
-import dataset
-import numpy as np
+# import dataset
+# import numpy as np
 import random
 import wandb
 # import utils
@@ -96,8 +96,7 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot):
 
     return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator
 
-wandb.init(project="thesis-project_train", entity="capra")
-wandb.run.name = "Train run 40 epochs 32 batch size"
+
 parser = argparse.ArgumentParser(description='RegNet')
 parser.add_argument('--loss', default='simple',
                     help='Type of loss used')
@@ -116,15 +115,18 @@ dataset_test = RegnetDataset(basedir, sequence_test)
 # sequence = ["00"]
 # Set the rando seed used for the permutations
 random.seed(1)
-epoch_number = 50
+epoch_number = 200
 learning_ratio = 0.00001
 batch_size = 32
 # rescale_param = 751.0
 rescale_param = 1.
 
 
+wandb.init(project="thesis-project_train", entity="capra")
+wandb.run.name = "Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
+
 dataset_train_size = len(dataset_train)
-print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono ",epoch_number)
+print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
 # print(dataset.__getitem__(0))
 # imageTensor = dataset.__getitem__(0)["rgb"]
 
@@ -239,7 +241,7 @@ for epoch in range(0, epoch_number):
 
 # save the model
 print("saving the model...")
-torch.save(model.state_dict(), "./models/model_"+str(epoch_number)+"-epochs_V2.pt")
+torch.save(model.state_dict(), "./models/model_"+str(epoch_number)+"-epochs_V4.pt")
 print("model saved")
 # test model load
 # model = RegNet()
