@@ -229,7 +229,7 @@ for epoch in range(0, epoch_number):
 
     if epoch == 0:
         best_loss = total_loss / len_TestImgLoader
-    if total_loss <= best_loss:
+    if total_loss <= best_loss/ len_TestImgLoader:
         print("Salvato modello nuovo migliore del precedente.")
         torch.save({
             'epoch': epoch,
