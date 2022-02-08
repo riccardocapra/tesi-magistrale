@@ -168,6 +168,7 @@ wandb.config = {
     "sample_quantity": dataset_train_size
 }
 
+best_loss = 0
 
 for epoch in range(0, epoch_number):
     print('This is %d-th epoch' % epoch)
@@ -177,7 +178,7 @@ for epoch in range(0, epoch_number):
     loss_train = 0
     total_loss = 0.
     # total_iter = 0
-    best_loss = 0
+
     c = 0
     for batch_idx, sample in enumerate(TrainImgLoader):
         loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
@@ -229,8 +230,8 @@ for epoch in range(0, epoch_number):
 
     if epoch == 0:
         best_loss = total_loss / len_TestImgLoader
-    if total_loss <= best_loss/ len_TestImgLoader:
-        print("Salvato modello nuovo migliore del precedente.")
+    if total_loss / len_TestImgLoader <= best_loss/ len_TestImgLoader:
+        print("Salvato modello nuovo migliore del precedente alla apoca "+str(epoch))
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
