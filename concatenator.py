@@ -93,7 +93,7 @@ def test_model(dataset, checkpoint_model, model_name="unnamed"):
     model_predicted_tr_decals = []
     for batch_idx, sample in enumerate(testImgLoader):
         test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator, velo_file, rgb_image, predicted_rot_decal, predicted_tr_decal = \
-            test(model_20, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
+            test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
                  sample["rgb_image"])
         total_loss += test_loss
         total_loss_rot += loss_rot
@@ -122,7 +122,6 @@ dataset_20 = RegnetDataset(basedir, sequence)
 dataset_size = len(dataset_20)
 rescale_param = 1.
 
-model_20 = RegNet()
 checkpoint = torch.load("./models/model_20.pt", map_location='cuda:0')
 
 epoch = checkpoint['epoch']
