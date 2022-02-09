@@ -13,66 +13,67 @@ import random
 from scipy.spatial.transform import Rotation as R
 import wandb
 import torch.optim as optim
+from main import test
 
-def test(test_model, rgb_img, refl_img, target_transl, target_rot):
-    test_model.eval()
-    rgb = rgb_img.to(device)
-    lidar = refl_img.to(device)
-    target_transl = target_transl.to(device)
-    target_rot = target_rot.to(device)
-
-    # target_transl = tr_error
-    # target_rot = rot_error
-
-    # if args.cuda:
-    #    rgb, lidar, target_transl, target_rot = rgb.cuda(), lidar.cuda(), target_transl.cuda(), target_rot.cuda()
-
-    # Run model disabling learning
-    with torch.no_grad():
-        transl_err, rot_err = test_model(rgb, lidar)
-
-    # Translation and rotation euclidean loss
-    # Sum errors computed with the input pose and check the distance with the target one
-    loss_test = nn.MSELoss(reduction='none')
-
-    # The following code is used to show the expected rotation vs the computed ones
-
-    rot_err_np = rot_err.cpu()
-    rot_err_np = rot_err_np.numpy()
-    rot_err_euler = R.from_euler('zyx', rot_err_np)
-    rot_err_euler = rot_err_euler.as_euler('zxy', degrees=True)
-    # print("rot err: ", rot_err_euler)
-
-    target_rot_np = target_rot.cpu()
-    target_rot_np = target_rot_np.numpy()
-    target_rot_euler = R.from_euler('zyx', target_rot_np)
-    target_rot_euler = target_rot_euler.as_euler('zxy', degrees=True)
-    # print("rot target: ", target_rot_euler)
-
-    loss_transl_test = loss_test(transl_err, target_transl).sum(1).mean()
-
-    loss_rot_test = loss_test(rot_err, target_rot).sum(1).mean()
-
-    total_loss_test = torch.add(loss_transl_test, rescale_param * loss_rot_test)
-
-    # total_trasl_error = 0.0
-    # total_rot_error = 0.0
-    # for j in range(rgb.shape[0]):
-    #     total_trasl_error += torch.norm(target_transl[j] - transl_err[j]) * 100.
-    #     total_rot_error += utils.quaternion_distance(target_rot[j], rot_err[j])
-
-    # return total_loss.item(), total_trasl_error.item(), total_rot_error, rot_err
-    test_comparator = [target_rot_euler, rot_err_euler]
-
-    return total_loss_test.item(), loss_rot_test, test_comparator
+# def test(test_model, rgb_img, refl_img, target_transl, target_rot):
+#     test_model.eval()
+#     rgb = rgb_img.to(device)
+#     lidar = refl_img.to(device)
+#     target_transl = target_transl.to(device)
+#     target_rot = target_rot.to(device)
+#
+#     # target_transl = tr_error
+#     # target_rot = rot_error
+#
+#     # if args.cuda:
+#     #    rgb, lidar, target_transl, target_rot = rgb.cuda(), lidar.cuda(), target_transl.cuda(), target_rot.cuda()
+#
+#     # Run model disabling learning
+#     with torch.no_grad():
+#         transl_err, rot_err = test_model(rgb, lidar)
+#
+#     # Translation and rotation euclidean loss
+#     # Sum errors computed with the input pose and check the distance with the target one
+#     loss_test = nn.MSELoss(reduction='none')
+#
+#     # The following code is used to show the expected rotation vs the computed ones
+#
+#     rot_err_np = rot_err.cpu()
+#     rot_err_np = rot_err_np.numpy()
+#     rot_err_euler = R.from_euler('zyx', rot_err_np)
+#     rot_err_euler = rot_err_euler.as_euler('zxy', degrees=True)
+#     # print("rot err: ", rot_err_euler)
+#
+#     target_rot_np = target_rot.cpu()
+#     target_rot_np = target_rot_np.numpy()
+#     target_rot_euler = R.from_euler('zyx', target_rot_np)
+#     target_rot_euler = target_rot_euler.as_euler('zxy', degrees=True)
+#     # print("rot target: ", target_rot_euler)
+#
+#     loss_transl_test = loss_test(transl_err, target_transl).sum(1).mean()
+#
+#     loss_rot_test = loss_test(rot_err, target_rot).sum(1).mean()
+#
+#     total_loss_test = torch.add(loss_transl_test, rescale_param * loss_rot_test)
+#
+#     # total_trasl_error = 0.0
+#     # total_rot_error = 0.0
+#     # for j in range(rgb.shape[0]):
+#     #     total_trasl_error += torch.norm(target_transl[j] - transl_err[j]) * 100.
+#     #     total_rot_error += utils.quaternion_distance(target_rot[j], rot_err[j])
+#
+#     # return total_loss.item(), total_trasl_error.item(), total_rot_error, rot_err
+#     test_comparator = [target_rot_euler, rot_err_euler]
+#
+#     return total_loss_test.item(), loss_rot_test, test_comparator
 
 
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = ["08", "09"]
+sequence = ["08"]
 dataset = RegnetDataset(basedir, sequence)
 # print('torch device', torch.cuda.current_device(), torch.cuda.device(0), torch.cuda.device_count())
-device = torch.device('cuda:1')
+device = torch.device('cuda:0')
 # Set the random seed used for the permutations
 random.seed(1)
 epoch_number = 1
@@ -111,7 +112,6 @@ wandb.config = {
 }
 
 TestImgLoader = torch.utils.data.DataLoader(dataset=dataset,
-                                            shuffle=True,
                                             batch_size=batch_size,
                                             num_workers=4,
                                             drop_last=False,
@@ -122,6 +122,7 @@ total_test_t = 0.
 total_test_r = 0.
 c = 0
 local_loss = 0.0
+
 len_TestImgLoader = len(TestImgLoader)
 for batch_idx, sample in enumerate(TestImgLoader):
     total_loss, loss_rot, comparator = test(model, sample['rgb'], sample['lidar'], sample['tr_error'],

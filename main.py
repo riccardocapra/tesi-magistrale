@@ -140,7 +140,6 @@ TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset_train,
                                              drop_last=False,
                                              pin_memory=True)
 TestImgLoader = torch.utils.data.DataLoader(dataset=dataset_test,
-                                            shuffle=True,
                                             batch_size=batch_size,
                                             num_workers=4,
                                             drop_last=False,
@@ -197,8 +196,8 @@ for epoch in range(0, epoch_number):
     total_loss = 0.
     total_loss_rot = 0.
     total_loss_transl = 0
-    total_test_t = 0.
-    total_test_r = 0.
+    # total_test_t = 0.
+    # total_test_r = 0.
 
     local_loss = 0.0
 

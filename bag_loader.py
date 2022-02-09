@@ -16,4 +16,5 @@ from bagpy import bagreader
 # import random
 
 bag = bagreader('/media/RAIDONE/DATASETS/rosbag/iralab_A4-5_0.bag')
-bag.topic_table
+topic_table = bag.topic_table
+

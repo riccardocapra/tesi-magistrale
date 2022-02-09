@@ -33,7 +33,8 @@ class RegnetDataset(Dataset):
 
         self.rgb_files = []
         self.velo_files = []
-
+        self.rot_errors = []
+        self.tr_errors = []
         self.sizes = []
         self.length = 0
         for key in self.datasets:
@@ -42,6 +43,8 @@ class RegnetDataset(Dataset):
             self.velo_files = [*self.velo_files, *self.datasets[key].velo_files]
             self.length = self.length + len(self.datasets[key].velo_files)
             self.sizes.append(len(self.datasets[key]))
+        self.initialize_decalibrations()
+
             # print(len(self.datasets[key]))
         # self.csv_file = pd.read_csv(os.path.join(dataset_dir, "dataset.csv"),
         #                             sep=',',
@@ -50,21 +53,45 @@ class RegnetDataset(Dataset):
 
         # self.pose_type = pose_type
         # self.transform = transform
+    def initialize_decalibrations(self):
+        for idx in range(self.length):
+            rot_error = [0, 0, 0]
+            tr_error = [0, 0, 0]
+            rot_error[0] = radians(random.randrange(-20, 20))
+            rot_error[1] = radians(random.randrange(-20, 20))
+            rot_error[2] = radians(random.randrange(-20, 20))
+
+            tr_error[0] = random.randrange(-150, 150) / 100
+            tr_error[1] = random.randrange(-150, 150) / 100
+            tr_error[2] = random.randrange(-150, 150) / 100
+            self.rot_errors.append(rot_error)
+            self.tr_errors.append(tr_error)
+
+    def set_decalibtarions(self,rot_error_input ,tr_error_input):
+        self.tr_errors = tr_error_input
+        self.rot_errors = rot_error_input
+
+    def correct_decalibrartions(self,rot_error_input ,tr_error_input):
+        c=0
+        for i in self.tr_errors:
+            i[0]-=tr_error_input[c][0]
+            i[1]-=tr_error_input[c][1]
+            i[2]-=tr_error_input[c][2]
+            self.rot_errors[c][0]-=rot_error_input[c][0]
+            self.rot_errors[c][2]-=rot_error_input[c][1]
+            self.rot_errors[c][1]-=rot_error_input[c][2]
+            c+=1
 
     def custom_transform(rgb_input):
-
         # Tenere img size originale
         # resize = transforms.Resize((352, 1216))
         to_tensor = transforms.ToTensor()
         normalization = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
-
         # rgb = resize(rgb)
-
         # if random.random() > 0.5:
         #     brightness = transforms.ColorJitter(brightness=0.4)
         #     rgb = brightness(rgb)
-
         rgb = to_tensor(rgb_input)
         rgb = normalization(rgb)
         return rgb
@@ -73,17 +100,17 @@ class RegnetDataset(Dataset):
         return self.length
 
     def __getitem__(self, idx):
-        rot_error = [0, 0, 0]
-        tr_error = [0, 0, 0]
-        rot_error[0] = radians(random.randrange(-20, 20))
-        rot_error[1] = radians(random.randrange(-20, 20))
-        rot_error[2] = radians(random.randrange(-20, 20))
+        # rot_error = [0, 0, 0]
+        # tr_error = [0, 0, 0]
+        # rot_error[0] = radians(random.randrange(-20, 20))
+        # rot_error[1] = radians(random.randrange(-20, 20))
+        # rot_error[2] = radians(random.randrange(-20, 20))
+        #
+        # tr_error[0] = random.randrange(-150, 150)/100
+        # tr_error[1] = random.randrange(-150, 150)/100
+        # tr_error[2] = random.randrange(-150, 150)/100
 
-        tr_error[0] = random.randrange(-150, 150)/100
-        tr_error[1] = random.randrange(-150, 150)/100
-        tr_error[2] = random.randrange(-150, 150)/100
-
-        depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, tr_error, rot_error)
+        depth = data_formatter_pcl_single(self.datasets, self.velo_files, idx, self.tr_errors[idx], self.rot_errors[idx])
 
         # Image have to be resized to
 
@@ -101,9 +128,10 @@ class RegnetDataset(Dataset):
 
         # If tensor has odd number of values, it's not possible to split it using an elegant way
         # Now rotation and translation are considered separately
-        tr = torch.from_numpy(np.array(tr_error)).float()
-        rot = torch.from_numpy(np.array(rot_error)).float()
+        tr = torch.from_numpy(np.array(self.tr_errors[idx])).float()
+        rot = torch.from_numpy(np.array(self.rot_errors[idx])).float()
 
-        sample = {'idx': idx, 'rgb': rgb.float(), 'lidar': depth.float(), 'tr_error': tr, 'rot_error': rot}
-
+        sample = {'idx': idx, 'rgb': rgb.float(), 'lidar': depth.float(), 'tr_error': tr, 'rot_error': rot,
+                  'velo_file':self.velo_files[idx], "rgb_file":self.rgb_files[idx]}
         return sample
+

@@ -4,6 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 
 
+
 def nin_block(in_channels, out_channels, kernel_size, strides, padding):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, kernel_size, strides, padding),
