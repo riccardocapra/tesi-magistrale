@@ -67,42 +67,41 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot, velo_file, rg
     tr_test_comparator = [transl_err_np, target_transl]
 
     return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator, \
-           velo_file, rgb_file
+           velo_file, rgb_file, rot_err_euler, transl_err
 
 
 # Specify the dataset to load
 basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
 sequence = ["08"]
-dataset = RegnetDataset(basedir, sequence)
+dataset_20 = RegnetDataset(basedir, sequence)
 # print('torch device', torch.cuda.current_device(), torch.cuda.device(0), torch.cuda.device_count())
 device = torch.device('cuda:0')
 # Set the random seed used for the permutations
 batch_size = 32
-dataset_size = len(dataset)
-uni = np.ones((dataset_size,3)).tolist()
-zeros = np.zeros((dataset_size,3)).tolist()
+dataset_size = len(dataset_20)
+# uni = np.ones((dataset_size,3)).tolist()
+# zeros = np.zeros((dataset_size,3)).tolist()
 rescale_param = 1.
 
-dataset.set_decalibtarions(uni,uni)
-dataset.correct_decalibrartions(zeros,zeros)
+# dataset.set_decalibtarions(uni,uni)
+# dataset.correct_decalibrartions(zeros,zeros)
 
 print("begin test")
 
-# test model load
+# test model_20 load
 model_20 = RegNet()
-
 parameters = filter(lambda p: p.requires_grad, model_20.parameters())
 learning_ratio = 0.00001
 optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-model = model_20.to(device)
-parameters = filter(lambda p: p.requires_grad, model.parameters())
+model_20 = model_20.to(device)
+parameters = filter(lambda p: p.requires_grad, model_20.parameters())
 # model.load_state_dict(torch.load("./models/model_20-epochs.pt", map_location='cuda:0'))
-checkpoint = torch.load("./models/partial_model_epoch-40.pt", map_location='cuda:0')
-model.load_state_dict(checkpoint['model_state_dict'])
+checkpoint = torch.load("./models/model_20.pt", map_location='cuda:0')
+model_20.load_state_dict(checkpoint['model_state_dict'])
 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 epoch = checkpoint['epoch']
 loss = checkpoint['loss']
-model.eval()
+model_20.eval()
 
 wandb.init(project="thesis-project_test", entity="capra")
 wandb.run.name = "test from epoch:"+str(epoch)
@@ -111,7 +110,7 @@ wandb.config = {
     "sample_quantity": dataset_size
 }
 
-TestImgLoader = torch.utils.data.DataLoader(dataset=dataset,
+TestImgLoader = torch.utils.data.DataLoader(dataset=dataset_20,
                                             batch_size=batch_size,
                                             num_workers=4,
                                             drop_last=False,
@@ -127,9 +126,12 @@ local_loss = 0.0
 
 len_TestImgLoader = len(TestImgLoader)
 c = 0
+
+predicted_rot_decals=[]
+predicted_tr_decals=[]
 for batch_idx, sample in enumerate(TestImgLoader):
-    test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator, velo_file, rgb_image = \
-        test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
+    test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator, velo_file, rgb_image, predicted_rot_decal, predicted_tr_decal = \
+        test(model_20, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
              sample["rgb_image"])
     total_loss+=test_loss
     total_loss_rot +=loss_rot
@@ -138,10 +140,13 @@ for batch_idx, sample in enumerate(TestImgLoader):
         wandb.log({"z-axis rotation error": abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
         wandb.log({"y-axis rotation error": abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
         wandb.log({"x-axis rotation error": abs(rot_comparator[0][i][2] - rot_comparator[1][i][2])})
-
         wandb.log({"z-axis translation error": abs(tr_comparator[0][i][0] - tr_comparator[1][i][0])})
         wandb.log({"y-axis translation error": abs(tr_comparator[0][i][1] - tr_comparator[1][i][1])})
         wandb.log({"x-axis translation error":  abs(tr_comparator[0][i][2] - tr_comparator[1][i][2])})
+        predicted_rot_decals.append(predicted_rot_decal[i])
+        predicted_tr_decals.append(predicted_tr_decal[i])
+
+
     c = c + 1
     # if c % 10 == 0:
     #     wandb.log({"loss trasl test": loss_transl})
@@ -150,6 +155,21 @@ for batch_idx, sample in enumerate(TestImgLoader):
 wandb.log({"total loss test": total_loss / len_TestImgLoader})
 wandb.log({"loss rot test": total_loss_rot / len_TestImgLoader})
 wandb.log({"loss trasl test": total_loss_transl / len_TestImgLoader})
+
+dataset_10  = dataset_20.copy()
+dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+model_10 = RegNet()
+optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+model_10 = model_10.to(device)
+parameters = filter(lambda p: p.requires_grad, model_10.parameters())
+# model.load_state_dict(torch.load("./models/model_20-epochs.pt", map_location='cuda:0'))
+checkpoint = torch.load("./models/model_10.pt", map_location='cuda:0')
+model_10.load_state_dict(checkpoint['model_state_dict'])
+optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+epoch = checkpoint['epoch']
+loss = checkpoint['loss']
+model_10.eval()
+
 
 #QUI ORA DEVI PRENDERE LE DECAL. PREDETTE, CORREGGERE IL DATASET E RIMANDARLO AL MODEL_10#
 

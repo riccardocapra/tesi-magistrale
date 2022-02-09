@@ -67,11 +67,12 @@ class RegnetDataset(Dataset):
             self.rot_errors.append(rot_error)
             self.tr_errors.append(tr_error)
 
-    def set_decalibtarions(self,rot_error_input ,tr_error_input):
+    def set_decalibrations(self,rot_error_input ,tr_error_input):
         self.tr_errors = tr_error_input
         self.rot_errors = rot_error_input
 
-    def correct_decalibrartions(self,rot_error_input ,tr_error_input):
+
+    def correct_decalibrations(self,rot_error_input ,tr_error_input):
         c=0
         for i in self.tr_errors:
             i[0]-=tr_error_input[c][0]
