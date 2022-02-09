@@ -70,6 +70,7 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot, velo_file, rg
            velo_file, rgb_file, rot_err_euler, transl_err
 
 def test_model(dataset, checkpoint_model, model_name="unnamed"):
+    print("begin test model_" + model_name)
     model = RegNet()
     parameters = filter(lambda p: p.requires_grad, model.parameters())
     learning_ratio = 0.00001
@@ -110,6 +111,7 @@ def test_model(dataset, checkpoint_model, model_name="unnamed"):
     wandb.log({"total loss test model": total_loss / len(testImgLoader)})
     wandb.log({"loss rot test model": total_loss_rot / len(testImgLoader)})
     wandb.log({"loss trasl test model": total_loss_transl / len(testImgLoader)})
+    print("ending test model_" + model_name)
     return model_predicted_rot_decals, model_predicted_tr_decals
 
 device = torch.device('cuda:0')
@@ -119,11 +121,10 @@ model_name="20"
 dataset_20 = RegnetDataset(basedir, sequence)
 dataset_size = len(dataset_20)
 rescale_param = 1.
-print("begin test model_"+model_name)
 
 model_20 = RegNet()
-
 checkpoint = torch.load("./models/model_20.pt", map_location='cuda:0')
+
 epoch = checkpoint['epoch']
 wandb.init(project="thesis-project_test", entity="capra")
 wandb.run.name = "test from epoch:"+str(epoch)
@@ -131,80 +132,13 @@ wandb.config = {
     "batch_size": checkpoint["batch_size"],
     "sample_quantity": dataset_size
 }
-print("begin test")
-predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, checkpoint, model_name)
 
+predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, checkpoint, model_name)
 #INIZIO MODELLO 10#
 
 dataset_10  = dataset_20.copy()
 dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+checkpoint = torch.load("./models/model_10.pt", map_location='cuda:0')
+predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, checkpoint, model_name)
 
-# model_10 = RegNet()
-# optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-# model_10 = model_10.to(device)
-# parameters = filter(lambda p: p.requires_grad, model_10.parameters())
-# # model.load_state_dict(torch.load("./models/model_20-epochs.pt", map_location='cuda:0'))
-# checkpoint = torch.load("./models/model_10.pt", map_location='cuda:0')
-# model_10.load_state_dict(checkpoint['model_state_dict'])
-# optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-# epoch = checkpoint['epoch']
-# loss = checkpoint['loss']
-# model_10.eval()
-# TestImgLoader_10 = torch.utils.data.DataLoader(dataset=dataset_20,
-#                                             batch_size=batch_size,
-#                                             num_workers=4,
-#                                             drop_last=False,
-#                                             pin_memory=True)
-#
-# total_loss = 0.
-# total_loss_rot = 0.
-# total_loss_transl = 0
-# # total_test_t = 0.
-# # total_test_r = 0.
-#
-# local_loss = 0.0
-#
-# len_TestImgLoader = len(TestImgLoader_10)
-# c = 0
-#
-# predicted_rot_decals=[]
-# predicted_tr_decals=[]
-# for batch_idx, sample in enumerate(TestImgLoader_10):
-#     test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator, velo_file, rgb_image, predicted_rot_decal, predicted_tr_decal = \
-#         test(model_10, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
-#              sample["rgb_image"])
-#     total_loss+=test_loss
-#     total_loss_rot +=loss_rot
-#     total_loss_transl +=loss_transl
-#     for i in range(rot_comparator[0].shape[0]):
-#         wandb.log({"Z rotation error model_10": abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
-#         wandb.log({"Y rotation error model_10": abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
-#         wandb.log({"X rotation error model_10": abs(rot_comparator[0][i][2] - rot_comparator[1][i][2])})
-#         wandb.log({"Z translation error model_10": abs(tr_comparator[0][i][0] - tr_comparator[1][i][0])})
-#         wandb.log({"Y translation error model_10": abs(tr_comparator[0][i][1] - tr_comparator[1][i][1])})
-#         wandb.log({"x translation error model_10":  abs(tr_comparator[0][i][2] - tr_comparator[1][i][2])})
-#         predicted_rot_decals.append(predicted_rot_decal[i])
-#         predicted_tr_decals.append(predicted_tr_decal[i])
-#
-#
-#     c = c + 1
-#     # if c % 10 == 0:
-#     #     wandb.log({"loss trasl test": loss_transl})
-#     #     wandb.log({"loss rot test": loss_rot})
-#     # print("testing" + str(c) + "/" + str(len_TestImgLoader))
-# wandb.log({"total loss test model": total_loss / len_TestImgLoader})
-# wandb.log({"loss rot test model": total_loss_rot / len_TestImgLoader})
-# wandb.log({"loss trasl test model": total_loss_transl / len_TestImgLoader})
-#
-
-#QUI ORA DEVI PRENDERE LE DECAL. PREDETTE, CORREGGERE IL DATASET E RIMANDARLO AL MODEL_10#
-
-#
-# # print("end test")
-# # print(rot_error)
-# # print("loss: "+str(loss_test/len_TestImgLoader))
-# # print("total_test_t: "+str(total_test_t))
-# # print("total_test_r: "+str(total_test_r))
-#
-#
 print("end CONCAT")
