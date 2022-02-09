@@ -110,7 +110,7 @@ wandb.config = {
     "sample_quantity": dataset_size
 }
 
-TestImgLoader = torch.utils.data.DataLoader(dataset=dataset_20,
+TestImgLoader_20 = torch.utils.data.DataLoader(dataset=dataset_20,
                                             batch_size=batch_size,
                                             num_workers=4,
                                             drop_last=False,
@@ -124,12 +124,12 @@ total_loss_transl = 0
 
 local_loss = 0.0
 
-len_TestImgLoader = len(TestImgLoader)
+len_TestImgLoader = len(TestImgLoader_20)
 c = 0
 
 predicted_rot_decals=[]
 predicted_tr_decals=[]
-for batch_idx, sample in enumerate(TestImgLoader):
+for batch_idx, sample in enumerate(TestImgLoader_20):
     test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator, velo_file, rgb_image, predicted_rot_decal, predicted_tr_decal = \
         test(model_20, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
              sample["rgb_image"])
@@ -137,12 +137,12 @@ for batch_idx, sample in enumerate(TestImgLoader):
     total_loss_rot +=loss_rot
     total_loss_transl +=loss_transl
     for i in range(rot_comparator[0].shape[0]):
-        wandb.log({"z-axis rotation error": abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
-        wandb.log({"y-axis rotation error": abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
-        wandb.log({"x-axis rotation error": abs(rot_comparator[0][i][2] - rot_comparator[1][i][2])})
-        wandb.log({"z-axis translation error": abs(tr_comparator[0][i][0] - tr_comparator[1][i][0])})
-        wandb.log({"y-axis translation error": abs(tr_comparator[0][i][1] - tr_comparator[1][i][1])})
-        wandb.log({"x-axis translation error":  abs(tr_comparator[0][i][2] - tr_comparator[1][i][2])})
+        wandb.log({"Z rotation error model_20": abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
+        wandb.log({"Y rotation error model_20": abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
+        wandb.log({"X rotation error model_20": abs(rot_comparator[0][i][2] - rot_comparator[1][i][2])})
+        wandb.log({"Z translation error model_20": abs(tr_comparator[0][i][0] - tr_comparator[1][i][0])})
+        wandb.log({"Y translation error model_20": abs(tr_comparator[0][i][1] - tr_comparator[1][i][1])})
+        wandb.log({"x translation error model_20":  abs(tr_comparator[0][i][2] - tr_comparator[1][i][2])})
         predicted_rot_decals.append(predicted_rot_decal[i])
         predicted_tr_decals.append(predicted_tr_decal[i])
 
@@ -152,9 +152,13 @@ for batch_idx, sample in enumerate(TestImgLoader):
     #     wandb.log({"loss trasl test": loss_transl})
     #     wandb.log({"loss rot test": loss_rot})
     # print("testing" + str(c) + "/" + str(len_TestImgLoader))
-wandb.log({"total loss test": total_loss / len_TestImgLoader})
-wandb.log({"loss rot test": total_loss_rot / len_TestImgLoader})
-wandb.log({"loss trasl test": total_loss_transl / len_TestImgLoader})
+wandb.log({"total loss test model_20": total_loss / len_TestImgLoader})
+wandb.log({"loss rot test model_20": total_loss_rot / len_TestImgLoader})
+wandb.log({"loss trasl test model_20": total_loss_transl / len_TestImgLoader})
+
+
+#INIZIO MODELLO 10#
+
 
 dataset_10  = dataset_20.copy()
 dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
@@ -169,6 +173,51 @@ optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 epoch = checkpoint['epoch']
 loss = checkpoint['loss']
 model_10.eval()
+TestImgLoader_10 = torch.utils.data.DataLoader(dataset=dataset_20,
+                                            batch_size=batch_size,
+                                            num_workers=4,
+                                            drop_last=False,
+                                            pin_memory=True)
+
+total_loss = 0.
+total_loss_rot = 0.
+total_loss_transl = 0
+# total_test_t = 0.
+# total_test_r = 0.
+
+local_loss = 0.0
+
+len_TestImgLoader = len(TestImgLoader_10)
+c = 0
+
+predicted_rot_decals=[]
+predicted_tr_decals=[]
+for batch_idx, sample in enumerate(TestImgLoader_10):
+    test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator, velo_file, rgb_image, predicted_rot_decal, predicted_tr_decal = \
+        test(model_10, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
+             sample["rgb_image"])
+    total_loss+=test_loss
+    total_loss_rot +=loss_rot
+    total_loss_transl +=loss_transl
+    for i in range(rot_comparator[0].shape[0]):
+        wandb.log({"Z rotation error model_10": abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
+        wandb.log({"Y rotation error model_10": abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
+        wandb.log({"X rotation error model_10": abs(rot_comparator[0][i][2] - rot_comparator[1][i][2])})
+        wandb.log({"Z translation error model_10": abs(tr_comparator[0][i][0] - tr_comparator[1][i][0])})
+        wandb.log({"Y translation error model_10": abs(tr_comparator[0][i][1] - tr_comparator[1][i][1])})
+        wandb.log({"x translation error model_10":  abs(tr_comparator[0][i][2] - tr_comparator[1][i][2])})
+        predicted_rot_decals.append(predicted_rot_decal[i])
+        predicted_tr_decals.append(predicted_tr_decal[i])
+
+
+    c = c + 1
+    # if c % 10 == 0:
+    #     wandb.log({"loss trasl test": loss_transl})
+    #     wandb.log({"loss rot test": loss_rot})
+    # print("testing" + str(c) + "/" + str(len_TestImgLoader))
+wandb.log({"total loss test model": total_loss / len_TestImgLoader})
+wandb.log({"loss rot test model": total_loss_rot / len_TestImgLoader})
+wandb.log({"loss trasl test model": total_loss_transl / len_TestImgLoader})
 
 
 #QUI ORA DEVI PRENDERE LE DECAL. PREDETTE, CORREGGERE IL DATASET E RIMANDARLO AL MODEL_10#
