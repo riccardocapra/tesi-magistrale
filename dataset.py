@@ -57,13 +57,13 @@ class RegnetDataset(Dataset):
         for idx in range(self.length):
             rot_error = [0, 0, 0]
             tr_error = [0, 0, 0]
-            rot_error[0] = radians(random.randrange(-20, 20))
-            rot_error[1] = radians(random.randrange(-20, 20))
-            rot_error[2] = radians(random.randrange(-20, 20))
+            rot_error[0] = radians(random.randrange(-10, 10))
+            rot_error[1] = radians(random.randrange(-10, 10))
+            rot_error[2] = radians(random.randrange(-10, 10))
 
-            tr_error[0] = random.randrange(-150, 150) / 100
-            tr_error[1] = random.randrange(-150, 150) / 100
-            tr_error[2] = random.randrange(-150, 150) / 100
+            tr_error[0] = random.randrange(-100, 100) / 100
+            tr_error[1] = random.randrange(-100, 100) / 100
+            tr_error[2] = random.randrange(-100, 100) / 100
             self.rot_errors.append(rot_error)
             self.tr_errors.append(tr_error)
 
@@ -73,14 +73,15 @@ class RegnetDataset(Dataset):
 
 
     def correct_decalibrations(self,rot_error_input ,tr_error_input):
+        # rot error arriva in gradi, va trasformato in radianti.
         c=0
         for i in self.tr_errors:
             i[0]-=tr_error_input[c][0]
             i[1]-=tr_error_input[c][1]
             i[2]-=tr_error_input[c][2]
-            self.rot_errors[c][0]-=rot_error_input[c][0]
-            self.rot_errors[c][2]-=rot_error_input[c][1]
-            self.rot_errors[c][1]-=rot_error_input[c][2]
+            self.rot_errors[c][0]-=radians(rot_error_input[c][0])
+            self.rot_errors[c][2]-=radians(rot_error_input[c][1])
+            self.rot_errors[c][1]-=radians(rot_error_input[c][2])
             c+=1
 
     def custom_transform(rgb_input):

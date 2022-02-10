@@ -19,7 +19,7 @@ import utils
 import cv2
 from PIL import Image
 
-def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, velo_file, rgb_file, rescale_param=1):
+def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, velo_file, rgb_file, rescale_param=1.):
     test_model.eval()
     rgb = rgb_img.to(device)
     lidar = refl_img.to(device)
@@ -75,8 +75,8 @@ def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", re
     optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
     model = model.to(device)
     # parameters = filter(lambda p: p.requires_grad, model.parameters())
-    model.load_state_dict(checkpoint_model['model_state_dict'])
-    optimizer.load_state_dict(checkpoint_model['optimizer_state_dict'])
+    model.load_state_dict(checkpoint_model)
+    # optimizer.load_state_dict(checkpoint_model['optimizer_state_dict'])
     model.eval()
     testImgLoader = torch.utils.data.DataLoader(dataset=dataset,
                                                    batch_size=32,
@@ -119,8 +119,6 @@ def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", re
 def main():
     print("main")
 
-
-
     device = torch.device('cuda:0')
     basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
     h, w = 352, 1216
@@ -130,18 +128,19 @@ def main():
     dataset_20 = RegnetDataset(basedir, sequence)
     dataset_size = len(dataset_20)
 
-    utils.data_formatter_pcl_single(dataset_20, dataset_20.velo_files, dataset_20)
-    cv2.imwrite('./images/'+model_name+'_decalibration.jpeg', depth_image_p)
+    # utils.data_formatter_pcl_single(dataset_20, dataset_20.velo_files, dataset_20)
+    # cv2.imwrite('./images/'+model_name+'_decalibration.jpeg', depth_image_p)
 
 
     # zero = np.zeros((dataset_size, 3))
     # zeroe = np.zeros((dataset_size, 3))
     # zero[0]=[90,0,90]
     # dataset_20.set_decalibrations(zero,zeroe)
-    utils.show_couple(dataset_20[0], dataset_20.datasets["08"].calib.K_cam2, h, w, model_name)
+    # utils.show_couple(dataset_20[0], dataset_20.datasets["08"].calib.K_cam2, h, w, model_name)
 
-    checkpoint = torch.load("./models/partial_model_epoch-0.pt", map_location='cuda:0')
-    epoch = checkpoint['epoch']
+    checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
+    # epoch = checkpoint['epoch']
+    epoch = 200
     wandb.init(project="thesis-project_test", entity="capra")
     wandb.run.name = "test from epoch:"+str(epoch)
     wandb.config = {
@@ -149,15 +148,15 @@ def main():
         "batch_size": 32,
         "sample_quantity": dataset_size
     }
-    # predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name, rescale_param)
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name, rescale_param)
 
     #INIZIO MODELLO 10#
 
     model_name = "10"
     dataset_10  = copy.deepcopy(dataset_20)
-    # dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
-    checkpoint = torch.load("./models/partial_model_epoch-0.pt", map_location='cuda:0')
-    # predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, checkpoint, model_name)
+    dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, device, checkpoint, model_name)
 
     #INIZIO MODELLO 05#
 

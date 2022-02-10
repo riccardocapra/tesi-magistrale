@@ -1,4 +1,4 @@
-import argparse
+# import argparse
 from regNet import RegNet
 import torch
 import torch.nn as nn
@@ -97,17 +97,18 @@ def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, resca
     return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator
 
 def main():
-    parser = argparse.ArgumentParser(description='RegNet')
-    parser.add_argument('--loss', default='simple',
-                    help='Type of loss used')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='RegNet')
+    # parser.add_argument('--loss', default='simple',
+    #                 help='Type of loss used')
+    # args = parser.parse_args()
     # args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 
     # Specify the dataset to load
     basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
 
-    sequence_train = ["00", "02", "03", "04", "05", "06", "07"]
+    sequence_train = ["00", "02"]
+    # sequence_train = ["00", "02", "03", "04", "05", "06", "07"]
     sequence_test = ["08", "09"]
     dataset_train = RegnetDataset(basedir, sequence_train)
     dataset_test = RegnetDataset(basedir, sequence_test)
@@ -115,7 +116,7 @@ def main():
     # sequence = ["00"]
     # Set the rando seed used for the permutations
     random.seed(1)
-    epoch_number = 200
+    epoch_number = 150
     learning_ratio = 0.00001
     batch_size = 32
     # rescale_param = 751.0
@@ -123,7 +124,7 @@ def main():
 
 
     wandb.init(project="thesis-project_train", entity="capra")
-    wandb.run.name = "Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
+    wandb.run.name = "model_10 Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
 
     dataset_train_size = len(dataset_train)
     print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
@@ -152,7 +153,12 @@ def main():
     len_TestImgLoader = len(TestImgLoader)
     # gpu +1
     device = torch.device("cuda:1")
+
+    print("carico il modello: model_200-epochs_V4.pt")
+    checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:1')
     model = RegNet()
+    model.load_state_dict(checkpoint)
+    print("modello caricato.")
     model = model.to(device)
     # imageTensor2 = imageTensor[:, :1, :, :]
     parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -229,16 +235,16 @@ def main():
 
         if epoch == 0:
             best_loss = total_loss / len_TestImgLoader
-        if total_loss / len_TestImgLoader <= best_loss/ len_TestImgLoader:
+        if total_loss / len_TestImgLoader < best_loss:
             print("Salvato modello nuovo migliore del precedente alla apoca "+str(epoch))
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':total_loss / len_TestImgLoader,
-            }, "./models/partial_model_epoch.pt")
+            }, "./models/model_10_partial.pt")
             best_loss=total_loss / len_TestImgLoader
-
+        print("epoch " + str(epoch) + " loss_test: " + str(total_loss / len_TestImgLoader))
     # save the model
     print("saving the last model...")
     torch.save({
@@ -246,7 +252,7 @@ def main():
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':total_loss / len_TestImgLoader,
-            }, "./models/partial_model_epoch.pt")
+            }, "./models/model_10.pt")
     print("model saved")
     # test model load
     # model = RegNet()
