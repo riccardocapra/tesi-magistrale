@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.utils.data.sampler import SubsetRandomSampler
 # import torch.optim as optim
 from dataset import RegnetDataset
-# import numpy as np
+import numpy as np
 # import math
 # import pykitti
 from scipy.spatial.transform import Rotation as R
@@ -15,8 +15,11 @@ import torch.optim as optim
 # from main import test
 from tqdm import tqdm
 import copy
+import utils
+import cv2
+from PIL import Image
 
-def test(test_model, rgb_img, refl_img, target_transl, target_rot, velo_file, rgb_file):
+def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, velo_file, rgb_file, rescale_param=1):
     test_model.eval()
     rgb = rgb_img.to(device)
     lidar = refl_img.to(device)
@@ -64,7 +67,7 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot, velo_file, rg
     return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator, \
            velo_file, rgb_file, rot_err_euler, transl_err_np
 
-def test_model(dataset, checkpoint_model, model_name_param="unnamed"):
+def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", rescale_param=1.):
     print("begin test model_" + model_name_param)
     model = RegNet()
     parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -89,8 +92,8 @@ def test_model(dataset, checkpoint_model, model_name_param="unnamed"):
     pbar_train = tqdm(total=len(testImgLoader))
     for batch_idx, sample in enumerate(testImgLoader):
         test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator, velo_file, rgb_image, predicted_rot_decal, predicted_tr_decal = \
-            test(model, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
-                 sample["rgb_file"])
+            test(model, device, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], sample["velo_file"],
+                 sample["rgb_file"], rescale_param)
         total_loss += test_loss
         total_loss_rot += loss_rot
         total_loss_transl += loss_transl
@@ -113,33 +116,59 @@ def test_model(dataset, checkpoint_model, model_name_param="unnamed"):
     return model_predicted_rot_decals, model_predicted_tr_decals
 
 
+def main():
+    print("main")
 
-device = torch.device('cuda:0')
-basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-sequence = ["08"]
-model_name="20"
-dataset_20 = RegnetDataset(basedir, sequence)
-dataset_size = len(dataset_20)
-rescale_param = 1.
 
-checkpoint = torch.load("./models/partial_model_epoch-0.pt", map_location='cuda:0')
 
-epoch = checkpoint['epoch']
-wandb.init(project="thesis-project_test", entity="capra")
-wandb.run.name = "test from epoch:"+str(epoch)
-wandb.config = {
-    # "batch_size": checkpoint["batch_size"],
-    "batch_size": 32,
-    "sample_quantity": dataset_size
-}
+    device = torch.device('cuda:0')
+    basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
+    h, w = 352, 1216
+    rescale_param = 1.
+    sequence = ["08"]
+    model_name="20"
+    dataset_20 = RegnetDataset(basedir, sequence)
+    dataset_size = len(dataset_20)
 
-predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, checkpoint, model_name)
-#INIZIO MODELLO 10#
+    utils.data_formatter_pcl_single(dataset_20, dataset_20.velo_files, dataset_20)
+    cv2.imwrite('./images/'+model_name+'_decalibration.jpeg', depth_image_p)
 
-model_name="10"
-dataset_10  = copy.deepcopy(dataset_20)
-dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
-checkpoint = torch.load("./models/partial_model_epoch-0.pt", map_location='cuda:0')
-predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, checkpoint, model_name)
 
-print("end CONCAT")
+    # zero = np.zeros((dataset_size, 3))
+    # zeroe = np.zeros((dataset_size, 3))
+    # zero[0]=[90,0,90]
+    # dataset_20.set_decalibrations(zero,zeroe)
+    utils.show_couple(dataset_20[0], dataset_20.datasets["08"].calib.K_cam2, h, w, model_name)
+
+    checkpoint = torch.load("./models/partial_model_epoch-0.pt", map_location='cuda:0')
+    epoch = checkpoint['epoch']
+    wandb.init(project="thesis-project_test", entity="capra")
+    wandb.run.name = "test from epoch:"+str(epoch)
+    wandb.config = {
+        # "batch_size": checkpoint["batch_size"],
+        "batch_size": 32,
+        "sample_quantity": dataset_size
+    }
+    # predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name, rescale_param)
+
+    #INIZIO MODELLO 10#
+
+    model_name = "10"
+    dataset_10  = copy.deepcopy(dataset_20)
+    # dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+    checkpoint = torch.load("./models/partial_model_epoch-0.pt", map_location='cuda:0')
+    # predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, checkpoint, model_name)
+
+    #INIZIO MODELLO 05#
+
+    model_name = "05"
+    dataset_05  = copy.deepcopy(dataset_10)
+    # dataset_05.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+
+
+    # creare un loop che cicla le dacal predette e tira fuori delle matrici
+
+    print("end CONCAT")
+
+if __name__ == "__main__":
+    main()

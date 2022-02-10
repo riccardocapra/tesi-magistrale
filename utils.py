@@ -2,8 +2,8 @@
 import numpy as np
 # import torch
 from torchvision import transforms
-# from PIL import Image
-# import cv2
+from PIL import Image
+import cv2
 from datetime import datetime
 from scipy.spatial.transform import Rotation as R
 import cupy
@@ -79,6 +79,14 @@ def perturbation(h_init, rot_error, tr_error):
     # print(new_h_init[:3, :3])
     return new_h_init
 
+def rototranslation_matrix_initializator(rot, trasl):
+    #La rotazione è espressa in gradi di Euldero con gli assi in ordine zyx
+    mat = np.eye(4)
+    rot_mat=R.from_euler('zyx', rot, degrees=True)
+    rot_mat = rot_mat.as_matrix()
+    mat[:3,:3] = rot_mat
+    mat[:3,3] = trasl
+    return mat
 
 def scan_loader(file):
     # print(file)
@@ -95,10 +103,10 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     # Find the sequence number in the file name
     sequence = velo_files[idx].split('/')[-3]
     # print(sequence)
-    dataset = datasets[sequence]
+    # dataset = datasets[sequence]
     # print(path[-1])
     # depth = dataset.get_velo(idx).T
-    h_init = np.copy(dataset.calib.T_cam2_velo)
+    h_init = np.copy(datasets[sequence].calib.T_cam2_velo)
     # depth_n = pcl_rt(depth, h_init, dataset.calib.K_cam2)
     h, w = 352, 1216
     # depth_image = depth_image_creation(depth_n, h, w)
@@ -108,7 +116,7 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
 
     new_h_init = perturbation(h_init, rot_error, tr_error)
 
-    depth_p = pcl_rt(depth, new_h_init, dataset.calib.K_cam2)
+    depth_p = pcl_rt(depth, new_h_init, datasets[sequence].calib.K_cam2)
     depth_image_p = depth_image_creation(depth_p, h, w)
     # cv2.imwrite('Perturbated.jpeg', depth_image_p)
 
@@ -116,3 +124,18 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
     to_tensor = transforms.ToTensor()
     depth_image_tensor = to_tensor(depth_image_p)
     return depth_image_tensor
+
+# Funzione che prende un sample del dataset, legge img_file, velo_file e proietta il velo sulla immagine
+# con la decalib impostata per quella sample
+def show_couple(sample, k_cam2, h, w, model_name):
+    depth = scan_loader(sample["velo_file"]).T
+    new_h_init = rototranslation_matrix_initializator(sample["rot_error"], sample["tr_error"])
+    print(new_h_init)
+    depth_p = pcl_rt(depth, new_h_init, k_cam2)
+    depth_image_p = depth_image_creation(depth_p, h, w)
+    cv2.imwrite('./images/'+model_name+'_decalibration.jpeg', depth_image_p)
+
+    rgb_img = Image.open(sample["rgb_file"])
+    rgb_img_cropped = rgb_img.crop((0, 0, 1216, 352))
+    rgb_img_cropped.save("./images/"+model_name+"_camera.jpg")
+    return

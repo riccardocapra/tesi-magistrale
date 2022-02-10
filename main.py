@@ -14,7 +14,7 @@ from scipy.spatial.transform import Rotation as R
 from dataset import RegnetDataset
 from tqdm import tqdm
 
-def train(train_model, train_optimizer, rgb_img, refl_img, target_transl_error, target_rot_error):
+def train(train_model, device, train_optimizer, rgb_img, refl_img, target_transl_error, target_rot_error, rescale_param=1):
     train_model.train()
 
     rgb = rgb_img.to(device)
@@ -42,7 +42,7 @@ def train(train_model, train_optimizer, rgb_img, refl_img, target_transl_error, 
     return total_loss_train.item()
 
 
-def test(test_model, rgb_img, refl_img, target_transl, target_rot):
+def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, rescale_param=1):
     test_model.eval()
     rgb = rgb_img.to(device)
     lidar = refl_img.to(device)
@@ -96,159 +96,162 @@ def test(test_model, rgb_img, refl_img, target_transl, target_rot):
 
     return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator
 
-
-parser = argparse.ArgumentParser(description='RegNet')
-parser.add_argument('--loss', default='simple',
+def main():
+    parser = argparse.ArgumentParser(description='RegNet')
+    parser.add_argument('--loss', default='simple',
                     help='Type of loss used')
-args = parser.parse_args()
-# args.cuda = not args.no_cuda and torch.cuda.is_available()
+    args = parser.parse_args()
+    # args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 
-# Specify the dataset to load
-basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
+    # Specify the dataset to load
+    basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
 
-sequence_train = ["00", "02", "03", "04", "05", "06", "07"]
-sequence_test = ["08", "09"]
-dataset_train = RegnetDataset(basedir, sequence_train)
-dataset_test = RegnetDataset(basedir, sequence_test)
+    sequence_train = ["00", "02", "03", "04", "05", "06", "07"]
+    sequence_test = ["08", "09"]
+    dataset_train = RegnetDataset(basedir, sequence_train)
+    dataset_test = RegnetDataset(basedir, sequence_test)
 
-# sequence = ["00"]
-# Set the rando seed used for the permutations
-random.seed(1)
-epoch_number = 200
-learning_ratio = 0.00001
-batch_size = 32
-# rescale_param = 751.0
-rescale_param = 1.
-
-
-wandb.init(project="thesis-project_train", entity="capra")
-wandb.run.name = "Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
-
-dataset_train_size = len(dataset_train)
-print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
-# print(dataset.__getitem__(0))
-# imageTensor = dataset.__getitem__(0)["rgb"]
-
-validation_split = 0
-# training_split = .8
-
-TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset_train,
-                                             shuffle=True,
-                                             batch_size=batch_size,
-                                             num_workers=4,
-                                             drop_last=False,
-                                             pin_memory=True)
-TestImgLoader = torch.utils.data.DataLoader(dataset=dataset_test,
-                                            batch_size=batch_size,
-                                            num_workers=4,
-                                            drop_last=False,
-                                            pin_memory=True)
-
-# print(len(TrainImgLoader))
-# print(len(TestImgLoader))
-
-len_TrainImgLoader = len(TrainImgLoader)
-len_TestImgLoader = len(TestImgLoader)
-# gpu +1
-device = torch.device("cuda:1")
-model = RegNet()
-model = model.to(device)
-# imageTensor2 = imageTensor[:, :1, :, :]
-parameters = filter(lambda p: p.requires_grad, model.parameters())
+    # sequence = ["00"]
+    # Set the rando seed used for the permutations
+    random.seed(1)
+    epoch_number = 200
+    learning_ratio = 0.00001
+    batch_size = 32
+    # rescale_param = 751.0
+    rescale_param = 1.
 
 
-optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    wandb.init(project="thesis-project_train", entity="capra")
+    wandb.run.name = "Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
 
-wandb.config = {
-    "learning_rate": learning_ratio,
-    "epochs": epoch_number,
-    "batch_size": batch_size,
-    "sample_quantity": dataset_train_size
-}
+    dataset_train_size = len(dataset_train)
+    print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
+    # print(dataset.__getitem__(0))
+    # imageTensor = dataset.__getitem__(0)["rgb"]
 
-best_loss = 0
-total_loss = 0
-for epoch in range(0, epoch_number):
-    print('This is %d-th epoch' % epoch)
+    validation_split = 0
+    # training_split = .8
 
-    pbar_train = tqdm(total=len_TrainImgLoader)
+    TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset_train,
+                                                 shuffle=True,
+                                                 batch_size=batch_size,
+                                                 num_workers=4,
+                                                 drop_last=False,
+                                                 pin_memory=True)
+    TestImgLoader = torch.utils.data.DataLoader(dataset=dataset_test,
+                                                batch_size=batch_size,
+                                                num_workers=4,
+                                                drop_last=False,
+                                                pin_memory=True)
 
-    loss_train = 0
-    total_loss = 0.
-    # total_iter = 0
+    # print(len(TrainImgLoader))
+    # print(len(TestImgLoader))
 
-    c = 0
-    for batch_idx, sample in enumerate(TrainImgLoader):
-        loss_train = train(model, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
-        total_loss+= loss_train
-        # local_loss_train = total_iter+loss_train
-        c = c+1
-        pbar_train.update(1)
-        # print("training "+str(c)+"/"+str(len_TrainImgLoader)+" epoch:"+str(epoch))
-    pbar_train.close()
-    wandb.log({"loss training": total_loss/len_TrainImgLoader})
-    print("epoch "+str(epoch)+" loss_train: "+str(total_loss/len_TrainImgLoader))
+    len_TrainImgLoader = len(TrainImgLoader)
+    len_TestImgLoader = len(TestImgLoader)
+    # gpu +1
+    device = torch.device("cuda:1")
+    model = RegNet()
+    model = model.to(device)
+    # imageTensor2 = imageTensor[:, :1, :, :]
+    parameters = filter(lambda p: p.requires_grad, model.parameters())
 
-    ## Test ##
 
-    pbar_test = tqdm(total=len_TestImgLoader)
-    total_loss = 0.
-    total_loss_rot = 0.
-    total_loss_transl = 0
-    # total_test_t = 0.
-    # total_test_r = 0.
+    optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
-    local_loss = 0.0
+    wandb.config = {
+        "learning_rate": learning_ratio,
+        "epochs": epoch_number,
+        "batch_size": batch_size,
+        "sample_quantity": dataset_train_size
+    }
 
-    c = 0
-    for batch_idx, sample in enumerate(TestImgLoader):
-        test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator = test(model, sample['rgb'], sample['lidar'], sample['tr_error'],
-                                                sample['rot_error'])
-        total_loss+=test_loss
-        total_loss_rot +=loss_rot
-        total_loss_transl +=loss_transl
-        for i in range(rot_comparator[0].shape[0]):
-            wandb.log({"z-axis rotation error": abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
-            wandb.log({"y-axis rotation error": abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
-            wandb.log({"x-axis rotation error": abs(rot_comparator[0][i][2] - rot_comparator[1][i][2])})
+    best_loss = 0
+    total_loss = 0
+    for epoch in range(0, epoch_number):
+        print('This is %d-th epoch' % epoch)
 
-            wandb.log({"z-axis translation error": abs(tr_comparator[0][i][0] - tr_comparator[1][i][0])})
-            wandb.log({"y-axis translation error": abs(tr_comparator[0][i][1] - tr_comparator[1][i][1])})
-            wandb.log({"x-axis translation error":  abs(tr_comparator[0][i][2] - tr_comparator[1][i][2])})
-        c = c + 1
-        pbar_test.update(1)
-        # if c % 10 == 0:
-        #     wandb.log({"loss trasl test": loss_transl})
-        #     wandb.log({"loss rot test": loss_rot})
-        # print("testing" + str(c) + "/" + str(len_TestImgLoader))
-    pbar_test.close()
-    wandb.log({"total loss test": total_loss / len_TestImgLoader})
-    wandb.log({"loss rot test": total_loss_rot / len_TestImgLoader})
-    wandb.log({"loss trasl test": total_loss_transl / len_TestImgLoader})
+        pbar_train = tqdm(total=len_TrainImgLoader)
 
-    if epoch == 0:
-        best_loss = total_loss / len_TestImgLoader
-    if total_loss / len_TestImgLoader <= best_loss/ len_TestImgLoader:
-        print("Salvato modello nuovo migliore del precedente alla apoca "+str(epoch))
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss':total_loss / len_TestImgLoader,
-        }, "./models/partial_model_epoch.pt")
-        best_loss=total_loss / len_TestImgLoader
+        loss_train = 0
+        total_loss = 0.
+        # total_iter = 0
 
-# save the model
-print("saving the last model...")
-torch.save({
-            'epoch': epoch_number,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss':total_loss / len_TestImgLoader,
-        }, "./models/partial_model_epoch.pt")
-print("model saved")
-# test model load
-# model = RegNet()
-# model.load_state_dict(torch.load("./models/model.pt"))
-# model.eval()
+        c = 0
+        for batch_idx, sample in enumerate(TrainImgLoader):
+            loss_train = train(model, device, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+            total_loss+= loss_train
+            # local_loss_train = total_iter+loss_train
+            c = c+1
+            pbar_train.update(1)
+            # print("training "+str(c)+"/"+str(len_TrainImgLoader)+" epoch:"+str(epoch))
+        pbar_train.close()
+        wandb.log({"loss training": total_loss/len_TrainImgLoader})
+        print("epoch "+str(epoch)+" loss_train: "+str(total_loss/len_TrainImgLoader))
+
+        ## Test ##
+
+        pbar_test = tqdm(total=len_TestImgLoader)
+        total_loss = 0.
+        total_loss_rot = 0.
+        total_loss_transl = 0
+        # total_test_t = 0.
+        # total_test_r = 0.
+
+        local_loss = 0.0
+
+        c = 0
+        for batch_idx, sample in enumerate(TestImgLoader):
+            test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator = test(model, device, sample['rgb'], sample['lidar'], sample['tr_error'],
+                                                    sample['rot_error'])
+            total_loss+=test_loss
+            total_loss_rot +=loss_rot
+            total_loss_transl +=loss_transl
+            for i in range(rot_comparator[0].shape[0]):
+                wandb.log({"z-axis rotation error": abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
+                wandb.log({"y-axis rotation error": abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
+                wandb.log({"x-axis rotation error": abs(rot_comparator[0][i][2] - rot_comparator[1][i][2])})
+
+                wandb.log({"z-axis translation error": abs(tr_comparator[0][i][0] - tr_comparator[1][i][0])})
+                wandb.log({"y-axis translation error": abs(tr_comparator[0][i][1] - tr_comparator[1][i][1])})
+                wandb.log({"x-axis translation error":  abs(tr_comparator[0][i][2] - tr_comparator[1][i][2])})
+            c = c + 1
+            pbar_test.update(1)
+            # if c % 10 == 0:
+            #     wandb.log({"loss trasl test": loss_transl})
+            #     wandb.log({"loss rot test": loss_rot})
+            # print("testing" + str(c) + "/" + str(len_TestImgLoader))
+        pbar_test.close()
+        wandb.log({"total loss test": total_loss / len_TestImgLoader})
+        wandb.log({"loss rot test": total_loss_rot / len_TestImgLoader})
+        wandb.log({"loss trasl test": total_loss_transl / len_TestImgLoader})
+
+        if epoch == 0:
+            best_loss = total_loss / len_TestImgLoader
+        if total_loss / len_TestImgLoader <= best_loss/ len_TestImgLoader:
+            print("Salvato modello nuovo migliore del precedente alla apoca "+str(epoch))
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss':total_loss / len_TestImgLoader,
+            }, "./models/partial_model_epoch.pt")
+            best_loss=total_loss / len_TestImgLoader
+
+    # save the model
+    print("saving the last model...")
+    torch.save({
+                'epoch': epoch_number,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss':total_loss / len_TestImgLoader,
+            }, "./models/partial_model_epoch.pt")
+    print("model saved")
+    # test model load
+    # model = RegNet()
+    # model.load_state_dict(torch.load("./models/model.pt"))
+    # model.eval()
+
+if __name__ == "__main__":
+    main()
