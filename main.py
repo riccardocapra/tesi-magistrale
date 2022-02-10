@@ -168,7 +168,7 @@ wandb.config = {
 }
 
 best_loss = 0
-
+total_loss = 0
 for epoch in range(0, epoch_number):
     print('This is %d-th epoch' % epoch)
 
@@ -240,8 +240,13 @@ for epoch in range(0, epoch_number):
         best_loss=total_loss / len_TestImgLoader
 
 # save the model
-print("saving the model...")
-torch.save(model.state_dict(), "./models/model_"+str(epoch_number)+"-epochs_V4.pt")
+print("saving the last model...")
+torch.save({
+            'epoch': epoch_number,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss':total_loss / len_TestImgLoader,
+        }, "./models/partial_model_epoch.pt")
 print("model saved")
 # test model load
 # model = RegNet()
