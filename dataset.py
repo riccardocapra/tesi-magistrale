@@ -57,13 +57,13 @@ class RegnetDataset(Dataset):
         for idx in range(self.length):
             rot_error = [0, 0, 0]
             tr_error = [0, 0, 0]
-            rot_error[0] = radians(random.randrange(-10, 10))
-            rot_error[1] = radians(random.randrange(-10, 10))
-            rot_error[2] = radians(random.randrange(-10, 10))
+            rot_error[0] = radians(random.randrange(15, 20))
+            rot_error[1] = radians(random.randrange(15, 20))
+            rot_error[2] = radians(random.randrange(15, 20))
 
-            tr_error[0] = random.randrange(-100, 100) / 100
-            tr_error[1] = random.randrange(-100, 100) / 100
-            tr_error[2] = random.randrange(-100, 100) / 100
+            tr_error[0] = random.randrange(100, 150) / 100
+            tr_error[1] = random.randrange(100, 150) / 100
+            tr_error[2] = random.randrange(100, 150) / 100
             self.rot_errors.append(rot_error)
             self.tr_errors.append(tr_error)
 

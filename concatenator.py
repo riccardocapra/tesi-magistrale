@@ -115,6 +115,24 @@ def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", re
     print("ending test model_" + model_name_param)
     return model_predicted_rot_decals, model_predicted_tr_decals
 
+def confront_decalib(dataset_decalib, predicted_decalib, accettable_range):
+    c = 0
+
+    #contains indexes of oor decals
+    out_of_range = []
+
+    confronter_total = []
+    for i in dataset_decalib:
+        z = abs(i[0]-predicted_decalib[c][0])
+        y = abs(i[1]-predicted_decalib[c][1])
+        x = abs(i[2]-predicted_decalib[c][2])
+        confronter = (z,y,x)
+        if z > accettable_range or y > accettable_range or x > accettable_range:
+            out_of_range.append(c)
+        c += 1
+        confronter_total.append(confronter)
+
+    return confronter_total, out_of_range
 
 def main():
     print("main")
@@ -131,25 +149,19 @@ def main():
     # utils.data_formatter_pcl_single(dataset_20, dataset_20.velo_files, dataset_20)
     # cv2.imwrite('./images/'+model_name+'_decalibration.jpeg', depth_image_p)
 
-
-    # zero = np.zeros((dataset_size, 3))
-    # zeroe = np.zeros((dataset_size, 3))
-    # zero[0]=[90,0,90]
-    # dataset_20.set_decalibrations(zero,zeroe)
-    # utils.show_couple(dataset_20[0], dataset_20.datasets["08"].calib.K_cam2, h, w, model_name)
-
     checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
     # epoch = checkpoint['epoch']
     epoch = 200
     wandb.init(project="thesis-project_test", entity="capra")
-    wandb.run.name = "test from epoch:"+str(epoch)
+    wandb.run.name = "test from epoch:"+str(epoch)+" with 15-20 decals"
     wandb.config = {
         # "batch_size": checkpoint["batch_size"],
         "batch_size": 32,
         "sample_quantity": dataset_size
     }
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name, rescale_param)
-
+    confront, out_of_range = confront_decalib(dataset_20.rot_errors, predicted_rot_decals, 10)
+    print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
     #INIZIO MODELLO 10#
 
     model_name = "10"
@@ -157,11 +169,13 @@ def main():
     dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
     # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, device, checkpoint, model_name)
+    confront, out_of_range = confront_decalib(dataset_20.rot_errors, predicted_rot_decals, 5)
+    print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+"O.O.R. per le rotazioni")
 
     #INIZIO MODELLO 05#
 
     model_name = "05"
-    dataset_05  = copy.deepcopy(dataset_10)
+    # dataset_05  = copy.deepcopy(dataset_10)
     # dataset_05.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
 
 

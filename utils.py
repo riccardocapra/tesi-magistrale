@@ -1,4 +1,6 @@
 # import pykitti
+import copy
+
 import numpy as np
 # import torch
 from torchvision import transforms
@@ -37,8 +39,9 @@ def quaternion_distance(q, r):
 
 
 def pcl_rt(depth_pts, cam_to_velo, camera_matrix):
-    depth_pts[3] = np.ones(depth_pts.shape[1])
-    depth_pt = cupy.dot(cam_to_velo, depth_pts)
+    depth_pts_cp = copy.deepcopy(depth_pts)
+    depth_pts_cp[3] = np.ones(depth_pts_cp.shape[1])
+    depth_pt = cupy.dot(cam_to_velo, depth_pts_cp)
     # rimuovere le x<0?
     # depth = depth[depth[:, 2] > 0]
     # creo una riga di uni da agganciare ai punti per moltiplicarli omogeneamente
@@ -79,12 +82,16 @@ def perturbation(h_init, rot_error, tr_error):
     # print(new_h_init[:3, :3])
     return new_h_init
 
-def rototranslation_matrix_initializator(rot, trasl):
-    #La rotazione è espressa in gradi di Euldero con gli assi in ordine zyx
+def rototranslation_matrix_initializator(rot, trasl,fix_orientation=True):
+    #La rotazione è espressa in radianti con gli assi in ordine zyx
     mat = np.eye(4)
-    rot_mat=R.from_euler('zyx', rot, degrees=True)
+    rot_mat = R.from_euler('zyx', rot)
+    if fix_orientation:
+        fix_mat = R.from_euler('zyx', [math.radians(90), 0, math.radians(90)])
+        fix_mat = fix_mat.as_matrix()
+        mat[:3,:3]=fix_mat
     rot_mat = rot_mat.as_matrix()
-    mat[:3,:3] = rot_mat
+    mat[:3,:3] = np.dot(rot_mat, mat[:3,:3])
     mat[:3,3] = trasl
     return mat
 
@@ -127,9 +134,16 @@ def data_formatter_pcl_single(datasets, velo_files, idx, tr_error, rot_error):
 
 # Funzione che prende un sample del dataset, legge img_file, velo_file e proietta il velo sulla immagine
 # con la decalib impostata per quella sample
-def show_couple(sample, k_cam2, h, w, model_name):
+def show_couple(sample, k_cam2, h, w, model_name, fix_orientation=True):
     depth = scan_loader(sample["velo_file"]).T
-    new_h_init = rototranslation_matrix_initializator(sample["rot_error"], sample["tr_error"])
+
+    print("La decalibrazione di rotazione su Z, Y, X è: "+str(math.degrees(sample["rot_error"][0]))+" "+
+          str(math.degrees(sample["rot_error"][1]))+" "+str(math.degrees(sample["rot_error"][2])))
+
+    print("La decalibrazione di traslazione su Z, Y, X è: "+str(sample["tr_error"][0])+" "+
+          str(sample["tr_error"][1])+" "+str(sample["tr_error"][2]))
+
+    new_h_init = rototranslation_matrix_initializator(sample["rot_error"], sample["tr_error"], fix_orientation)
     print(new_h_init)
     depth_p = pcl_rt(depth, new_h_init, k_cam2)
     depth_image_p = depth_image_creation(depth_p, h, w)

@@ -107,8 +107,8 @@ def main():
     # Specify the dataset to load
     basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
 
-    sequence_train = ["00", "02"]
-    # sequence_train = ["00", "02", "03", "04", "05", "06", "07"]
+    # sequence_train = ["00", "02"]
+    sequence_train = ["00", "02", "03", "04", "05", "06", "07"]
     sequence_test = ["08", "09"]
     dataset_train = RegnetDataset(basedir, sequence_train)
     dataset_test = RegnetDataset(basedir, sequence_test)
@@ -117,7 +117,7 @@ def main():
     # Set the rando seed used for the permutations
     random.seed(1)
     epoch_number = 150
-    learning_ratio = 0.00001
+    learning_ratio = 0.
     batch_size = 32
     # rescale_param = 751.0
     rescale_param = 1.
