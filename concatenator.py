@@ -1,5 +1,7 @@
 # import argparse
 # import utils
+import math
+
 from regNet import RegNet
 import torch
 import torch.nn as nn
@@ -123,9 +125,9 @@ def confront_decalib(dataset_decalib, predicted_decalib, accettable_range):
 
     confronter_total = []
     for i in dataset_decalib:
-        z = abs(i[0]-predicted_decalib[c][0])
-        y = abs(i[1]-predicted_decalib[c][1])
-        x = abs(i[2]-predicted_decalib[c][2])
+        z = abs(i[0]-math.radians(predicted_decalib[c][0]))
+        y = abs(i[1]-math.radians(predicted_decalib[c][1]))
+        x = abs(i[2]-math.radians(predicted_decalib[c][2]))
         confronter = (z,y,x)
         if z > accettable_range or y > accettable_range or x > accettable_range:
             out_of_range.append(c)
@@ -160,7 +162,7 @@ def main():
         "sample_quantity": dataset_size
     }
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name, rescale_param)
-    confront, out_of_range = confront_decalib(dataset_20.rot_errors, predicted_rot_decals, 10)
+    confront, out_of_range = confront_decalib(dataset_20.rot_errors, predicted_rot_decals, math.radians(10))
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
     #INIZIO MODELLO 10#
 
@@ -169,8 +171,8 @@ def main():
     dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
     # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, device, checkpoint, model_name)
-    confront, out_of_range = confront_decalib(dataset_20.rot_errors, predicted_rot_decals, 5)
-    print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+"O.O.R. per le rotazioni")
+    confront, out_of_range = confront_decalib(dataset_10.rot_errors, predicted_rot_decals, math.radians(5))
+    print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
 
     #INIZIO MODELLO 05#
 
