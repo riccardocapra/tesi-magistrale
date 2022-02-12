@@ -67,14 +67,14 @@ def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, velo_
     tr_test_comparator = [transl_err_np, target_transl]
 
     return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator, \
-           velo_file, rgb_file, rot_err_euler, transl_err_np
+           velo_file, rgb_file, rot_err_np, transl_err_np
 
 def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", rescale_param=1.):
     print("begin test model_" + model_name_param)
     model = RegNet()
     parameters = filter(lambda p: p.requires_grad, model.parameters())
     learning_ratio = 0.00001
-    optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    # optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
     model = model.to(device)
     # parameters = filter(lambda p: p.requires_grad, model.parameters())
     model.load_state_dict(checkpoint_model)
@@ -126,9 +126,9 @@ def confront_decalib(dataset_decalib, predicted_decalib, accettable_range):
 
     confronter_total = []
     for i in dataset_decalib:
-        z = abs(i[0]-math.radians(predicted_decalib[c][0]))
-        y = abs(i[1]-math.radians(predicted_decalib[c][1]))
-        x = abs(i[2]-math.radians(predicted_decalib[c][2]))
+        z = abs(i[0]-predicted_decalib[c][0])
+        y = abs(i[1]-predicted_decalib[c][1])
+        x = abs(i[2]-predicted_decalib[c][2])
         confronter = (z,y,x)
         if z > accettable_range or y > accettable_range or x > accettable_range:
             out_of_range.append(c)
@@ -156,7 +156,7 @@ def main():
     # epoch = checkpoint['epoch']
     epoch = 200
     wandb.init(project="thesis-project_test", entity="capra")
-    wandb.run.name = "test from epoch:"+str(epoch)+" with 15-20 decals"
+    wandb.run.name = "Test of model_20 NET - full"
     wandb.config = {
         # "batch_size": checkpoint["batch_size"],
         "batch_size": 32,
@@ -179,9 +179,30 @@ def main():
     #INIZIO MODELLO 05#
 
     model_name = "05"
-    # dataset_05  = copy.deepcopy(dataset_10)
-    # dataset_05.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+    dataset_05  = copy.deepcopy(dataset_10)
+    dataset_05.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_05, device, checkpoint, model_name)
+    confront, out_of_range = confront_decalib(dataset_05.rot_errors, predicted_rot_decals, math.radians(2))
+    print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
 
+    #INIZIO MODELLO 02#
+
+    model_name = "02"
+    dataset_02  = copy.deepcopy(dataset_05)
+    dataset_02.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_02, device, checkpoint, model_name)
+    confront, out_of_range = confront_decalib(dataset_02.rot_errors, predicted_rot_decals, math.radians(1))
+    print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
+
+
+    #INIZIO MODELLO 01#
+
+    model_name = "01"
+    dataset_01  = copy.deepcopy(dataset_02)
+    dataset_01.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_01, device, checkpoint, model_name)
+    confront, out_of_range = confront_decalib(dataset_01.rot_errors, predicted_rot_decals, math.radians(0.5))
+    print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
 
     # creare un loop che cicla le dacal predette e tira fuori delle matrici
 

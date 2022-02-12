@@ -28,11 +28,23 @@ def main():
     rot = dataset_model.rot_errors
     tr = dataset_model.tr_errors
 
-    rot[0] = [math.radians(20),math.radians(0),math.radians(-15)]
+    rot[0] = [math.radians(20),math.radians(0),math.radians(0)]
 
     dataset_model.set_decalibrations(rot, tr)
+    #mostra la decalibrazione originale
     utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, model_name, True)
-
+    # set test
+    rot[0] = [math.radians(10), math.radians(0), math.radians(0)]
+    dataset_model.set_decalibrations(rot, tr)
+    # mostra la decalibrazione impostata
+    utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "decal", True)
+    #correct test
+    rot = np.zeros((len(dataset_model), 3))
+    tr = np.zeros((len(dataset_model), 3))
+    rot[0] = [math.radians(10), math.radians(0), math.radians(0)]
+    dataset_model.correct_decalibrations(rot, tr)
+    # mostra la decalibrazione impostata corretta
+    utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "correct", True)
 
 
     # print("---- VELO_IMAGE "+str(idx)+" FORMATTING BEGUN ---")
