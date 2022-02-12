@@ -41,10 +41,10 @@ def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, velo_
     rot_err_np = rot_err.cpu()
     rot_err_np = rot_err_np.numpy()
     rot_err_euler = R.from_euler('zyx', rot_err_np)
-    rot_err_euler = rot_err_euler.as_euler('zxy', degrees=True)
+    rot_err_euler = rot_err_euler.as_euler('zyx', degrees=True)
     # print("rot err: ", rot_err_euler)
     target_rot_euler = R.from_euler('zyx', target_rot)
-    target_rot_euler = target_rot_euler.as_euler('zxy', degrees=True)
+    target_rot_euler = target_rot_euler.as_euler('zyx', degrees=True)
 
     transl_err_np = transl_err.cpu().numpy()
 
@@ -101,6 +101,7 @@ def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", re
         total_loss_transl += loss_transl
         for i in range(rot_comparator[0].shape[0]):
             wandb.log({"Z rotation error model_"+model_name_param: abs(rot_comparator[0][i][0] - rot_comparator[1][i][0])})
+            # print(abs(rot_comparator[0][i][0] - rot_comparator[1][i][0]))
             wandb.log({"Y rotation error model_"+model_name_param: abs(rot_comparator[0][i][1] - rot_comparator[1][i][1])})
             wandb.log({"X rotation error model_"+model_name_param: abs(rot_comparator[0][i][2] - rot_comparator[1][i][2])})
             wandb.log({"Z translation error model_"+model_name_param: abs(tr_comparator[0][i][0] - tr_comparator[1][i][0])})
@@ -164,6 +165,7 @@ def main():
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name, rescale_param)
     confront, out_of_range = confront_decalib(dataset_20.rot_errors, predicted_rot_decals, math.radians(10))
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
+    print(out_of_range[:10])
     #INIZIO MODELLO 10#
 
     model_name = "10"

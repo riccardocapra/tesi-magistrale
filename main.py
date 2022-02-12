@@ -68,10 +68,10 @@ def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, resca
     rot_err_np = rot_err.cpu()
     rot_err_np = rot_err_np.numpy()
     rot_err_euler = R.from_euler('zyx', rot_err_np)
-    rot_err_euler = rot_err_euler.as_euler('zxy', degrees=True)
+    rot_err_euler = rot_err_euler.as_euler('zyx', degrees=True)
     # print("rot err: ", rot_err_euler)
     target_rot_euler = R.from_euler('zyx', target_rot)
-    target_rot_euler = target_rot_euler.as_euler('zxy', degrees=True)
+    target_rot_euler = target_rot_euler.as_euler('zyx', degrees=True)
 
     transl_err_np = transl_err.cpu().numpy()
 
