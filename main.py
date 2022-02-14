@@ -124,7 +124,7 @@ def main():
 
 
     wandb.init(project="thesis-project_train", entity="capra")
-    wandb.run.name = "model_10 Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
+    wandb.run.name = "model_5 Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
 
     dataset_train_size = len(dataset_train)
     print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
@@ -154,10 +154,10 @@ def main():
     # gpu +1
     device = torch.device("cuda:1")
 
-    print("carico il modello: model_200-epochs_V4.pt")
-    checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:1')
+    print("carico il modello: model_10.pt")
+    checkpoint = torch.load("./models/model_10.pt", map_location='cuda:1')
     model = RegNet()
-    model.load_state_dict(checkpoint)
+    model.load_state_dict(checkpoint["model_state_dict"])
     print("modello caricato.")
     model = model.to(device)
     # imageTensor2 = imageTensor[:, :1, :, :]
@@ -242,7 +242,7 @@ def main():
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':total_loss / len_TestImgLoader,
-            }, "./models/model_10_partial.pt")
+            }, "./models/model_05_partial.pt")
             best_loss=total_loss / len_TestImgLoader
         print("epoch " + str(epoch) + " loss_test: " + str(total_loss / len_TestImgLoader))
     # save the model
@@ -252,7 +252,7 @@ def main():
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':total_loss / len_TestImgLoader,
-            }, "./models/model_10.pt")
+            }, "./models/model_05.pt")
     print("model saved")
     # test model load
     # model = RegNet()

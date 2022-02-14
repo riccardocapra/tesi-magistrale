@@ -34,6 +34,7 @@ class RegnetDataset(Dataset):
         self.rgb_files = []
         self.velo_files = []
         self.rot_errors = []
+        self.rot_errors_euler = []
         self.tr_errors = []
         self.sizes = []
         self.length = 0
@@ -56,15 +57,20 @@ class RegnetDataset(Dataset):
     def initialize_decalibrations(self):
         for idx in range(self.length):
             rot_error = [0, 0, 0]
+            rot_error_euler = [0, 0, 0]
             tr_error = [0, 0, 0]
-            rot_error[0] = radians(random.randrange(-20, 20))
-            rot_error[1] = radians(random.randrange(-20, 20))
-            rot_error[2] = radians(random.randrange(-20, 20))
+            rot_error_euler[0] = random.randrange(-20, 20)
+            rot_error[0] = radians(rot_error_euler[0])
+            rot_error_euler[1] = random.randrange(-20, 20)
+            rot_error[1] = radians(rot_error_euler[1])
+            rot_error_euler[2] = random.randrange(-20, 20)
+            rot_error[2] = radians(rot_error_euler[2])
 
             tr_error[0] = random.randrange(-150, 150) / 100
             tr_error[1] = random.randrange(-150, 150) / 100
             tr_error[2] = random.randrange(-150, 150) / 100
             self.rot_errors.append(rot_error)
+            self.rot_errors_euler.append(rot_error_euler)
             self.tr_errors.append(tr_error)
 
     def set_decalibrations(self,rot_error_input ,tr_error_input):
@@ -73,16 +79,19 @@ class RegnetDataset(Dataset):
 
 
     def correct_decalibrations(self,rot_error_input ,tr_error_input):
-        # rot error arriva in radianti.
+        # rot error arriva in gradi.
         c=0
         for i in self.tr_errors:
 
             i[0] = i[0] - tr_error_input[c][0]
             i[1] = i[1] - tr_error_input[c][1]
             i[2] = i[2] - tr_error_input[c][2]
-            self.rot_errors[c][0] = self.rot_errors[c][0] - rot_error_input[c][0]
-            self.rot_errors[c][1] = self.rot_errors[c][1] - rot_error_input[c][1]
-            self.rot_errors[c][2] = self.rot_errors[c][2] - rot_error_input[c][2]
+            self.rot_errors_euler[c][0] = self.rot_errors_euler[c][0] - rot_error_input[c][0]
+            self.rot_errors[c][0] = radians(self.rot_errors_euler[c][0])
+            self.rot_errors_euler[c][1] = self.rot_errors_euler[c][1] - rot_error_input[c][1]
+            self.rot_errors[c][1] = radians(self.rot_errors_euler[c][1])
+            self.rot_errors_euler[c][2] = self.rot_errors_euler[c][2] - rot_error_input[c][2]
+            self.rot_errors[c][2] = radians(self.rot_errors_euler[c][2])
             c+=1
 
     def custom_transform(rgb_input):

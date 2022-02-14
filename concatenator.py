@@ -67,17 +67,20 @@ def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, velo_
     tr_test_comparator = [transl_err_np, target_transl]
 
     return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator, \
-           velo_file, rgb_file, rot_err_np, transl_err_np
+           velo_file, rgb_file, rot_err_euler, transl_err_np
 
-def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", rescale_param=1.):
+def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", complete_checkpoint=False,rescale_param=1.):
     print("begin test model_" + model_name_param)
     model = RegNet()
-    parameters = filter(lambda p: p.requires_grad, model.parameters())
-    learning_ratio = 0.00001
+    # parameters = filter(lambda p: p.requires_grad, model.parameters())
+    # learning_ratio = 0.00001
     # optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
     model = model.to(device)
     # parameters = filter(lambda p: p.requires_grad, model.parameters())
-    model.load_state_dict(checkpoint_model)
+    if complete_checkpoint==True:
+        model.load_state_dict(checkpoint_model["model_state_dict"])
+    else:
+        model.load_state_dict(checkpoint_model)
     # optimizer.load_state_dict(checkpoint_model['optimizer_state_dict'])
     model.eval()
     testImgLoader = torch.utils.data.DataLoader(dataset=dataset,
@@ -120,16 +123,17 @@ def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", re
 
 def confront_decalib(dataset_decalib, predicted_decalib, accettable_range):
     c = 0
-
     #contains indexes of oor decals
     out_of_range = []
-
     confronter_total = []
     for i in dataset_decalib:
         z = abs(i[0]-predicted_decalib[c][0])
+        print("z: "+str(i[0])+" "+str(predicted_decalib[c][0]))
         y = abs(i[1]-predicted_decalib[c][1])
+        print("y: "+str(i[1])+" "+str(predicted_decalib[c][1]))
         x = abs(i[2]-predicted_decalib[c][2])
-        confronter = (z,y,x)
+        print("x: "+str(i[2])+" "+str(predicted_decalib[c][2]))
+        confronter = (z, y, x)
         if z > accettable_range or y > accettable_range or x > accettable_range:
             out_of_range.append(c)
         c += 1
@@ -142,7 +146,7 @@ def main():
 
     device = torch.device('cuda:0')
     basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
-    h, w = 352, 1216
+    # h, w = 352, 1216
     rescale_param = 1.
     sequence = ["08"]
     model_name="20"
@@ -156,14 +160,14 @@ def main():
     # epoch = checkpoint['epoch']
     epoch = 200
     wandb.init(project="thesis-project_test", entity="capra")
-    wandb.run.name = "Test of model_20 NET - full"
+    wandb.run.name = "Test of model_20 NET - full std decal"
     wandb.config = {
         # "batch_size": checkpoint["batch_size"],
         "batch_size": 32,
         "sample_quantity": dataset_size
     }
-    predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name, rescale_param)
-    confront, out_of_range = confront_decalib(dataset_20.rot_errors, predicted_rot_decals, math.radians(10))
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name)
+    confront, out_of_range = confront_decalib(dataset_20.rot_errors_euler, predicted_rot_decals, 10)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
     print(out_of_range[:10])
     #INIZIO MODELLO 10#
@@ -171,9 +175,9 @@ def main():
     model_name = "10"
     dataset_10  = copy.deepcopy(dataset_20)
     dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
-    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
-    predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, device, checkpoint, model_name)
-    confront, out_of_range = confront_decalib(dataset_10.rot_errors, predicted_rot_decals, math.radians(5))
+    checkpoint = torch.load("./models/model_10.pt", map_location='cuda:0')
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, device, checkpoint, model_name, True)
+    confront, out_of_range = confront_decalib(dataset_10.rot_errors_euler, predicted_rot_decals, 5)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
 
     #INIZIO MODELLO 05#
@@ -181,8 +185,8 @@ def main():
     model_name = "05"
     dataset_05  = copy.deepcopy(dataset_10)
     dataset_05.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
-    predicted_rot_decals,predicted_tr_decals = test_model(dataset_05, device, checkpoint, model_name)
-    confront, out_of_range = confront_decalib(dataset_05.rot_errors, predicted_rot_decals, math.radians(2))
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_05, device, checkpoint, model_name, True)
+    confront, out_of_range = confront_decalib(dataset_05.rot_errors_euler, predicted_rot_decals, 2)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
 
     #INIZIO MODELLO 02#
@@ -190,8 +194,8 @@ def main():
     model_name = "02"
     dataset_02  = copy.deepcopy(dataset_05)
     dataset_02.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
-    predicted_rot_decals,predicted_tr_decals = test_model(dataset_02, device, checkpoint, model_name)
-    confront, out_of_range = confront_decalib(dataset_02.rot_errors, predicted_rot_decals, math.radians(1))
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_02, device, checkpoint, model_name, True)
+    confront, out_of_range = confront_decalib(dataset_02.rot_errors_euler, predicted_rot_decals, 1)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
 
 
@@ -200,8 +204,8 @@ def main():
     model_name = "01"
     dataset_01  = copy.deepcopy(dataset_02)
     dataset_01.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
-    predicted_rot_decals,predicted_tr_decals = test_model(dataset_01, device, checkpoint, model_name)
-    confront, out_of_range = confront_decalib(dataset_01.rot_errors, predicted_rot_decals, math.radians(0.5))
+    predicted_rot_decals,predicted_tr_decals = test_model(dataset_01, device, checkpoint, model_name, True)
+    confront, out_of_range = confront_decalib(dataset_01.rot_errors_euler, predicted_rot_decals, 0.5)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
 
     # creare un loop che cicla le dacal predette e tira fuori delle matrici
