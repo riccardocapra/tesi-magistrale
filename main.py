@@ -42,22 +42,16 @@ def train(train_model, device, train_optimizer, rgb_img, refl_img, target_transl
     return total_loss_train.item()
 
 
-def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, rescale_param=1):
-    test_model.eval()
+def test(tested_model, device, rgb_img, refl_img, target_transl, target_rot, velo_file, rgb_file, rescale_param=1.):
+    tested_model.eval()
     rgb = rgb_img.to(device)
     lidar = refl_img.to(device)
     target_transl_device = target_transl.to(device)
     target_rot_device = target_rot.to(device)
 
-    # target_transl = tr_error
-    # target_rot = rot_error
-
-    # if args.cuda:
-    #    rgb, lidar, target_transl, target_rot = rgb.cuda(), lidar.cuda(), target_transl.cuda(), target_rot.cuda()
-
     # Run model disabling learning
     with torch.no_grad():
-        transl_err, rot_err = test_model(rgb, lidar)
+        transl_err, rot_err = tested_model(rgb, lidar)
 
     # Translation and rotation euclidean loss
     # Sum errors computed with the input pose and check the distance with the target one
@@ -74,7 +68,6 @@ def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, resca
     target_rot_euler = target_rot_euler.as_euler('zyx', degrees=True)
 
     transl_err_np = transl_err.cpu().numpy()
-
 
     # print("rot target: ", target_rot_euler)
 
@@ -94,7 +87,8 @@ def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, resca
     rot_test_comparator = [target_rot_euler, rot_err_euler]
     tr_test_comparator = [transl_err_np, target_transl]
 
-    return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator
+    return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator, \
+           velo_file, rgb_file, rot_err_euler, transl_err_np
 
 def main():
     # parser = argparse.ArgumentParser(description='RegNet')
@@ -117,7 +111,7 @@ def main():
     # Set the rando seed used for the permutations
     random.seed(1)
     epoch_number = 150
-    learning_ratio = 0.
+    learning_ratio = 0.00001
     batch_size = 32
     # rescale_param = 751.0
     rescale_param = 1.
@@ -172,7 +166,7 @@ def main():
         "batch_size": batch_size,
         "sample_quantity": dataset_train_size
     }
-
+    model_name = "model_05_test"
     best_loss = 0
     total_loss = 0
     for epoch in range(0, epoch_number):
@@ -209,8 +203,11 @@ def main():
 
         c = 0
         for batch_idx, sample in enumerate(TestImgLoader):
-            test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator = test(model, device, sample['rgb'], sample['lidar'], sample['tr_error'],
-                                                    sample['rot_error'])
+            test_loss, loss_rot, loss_transl, rot_comparator, tr_comparator, velo_file, rgb_image, \
+            predicted_rot_decal, predicted_tr_decal = \
+                test(model, device, sample['rgb'],sample['lidar'], sample['tr_error'], sample['rot_error'],
+                     sample["velo_file"], sample["rgb_file"])
+
             total_loss+=test_loss
             total_loss_rot +=loss_rot
             total_loss_transl +=loss_transl
@@ -233,17 +230,17 @@ def main():
         wandb.log({"loss rot test": total_loss_rot / len_TestImgLoader})
         wandb.log({"loss trasl test": total_loss_transl / len_TestImgLoader})
 
-        if epoch == 0:
-            best_loss = total_loss / len_TestImgLoader
-        if total_loss / len_TestImgLoader < best_loss:
-            print("Salvato modello nuovo migliore del precedente alla apoca "+str(epoch))
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'loss':total_loss / len_TestImgLoader,
-            }, "./models/model_05_partial.pt")
-            best_loss=total_loss / len_TestImgLoader
+        # if epoch == 0:
+        #     best_loss = total_loss / len_TestImgLoader
+        # if total_loss / len_TestImgLoader < best_loss:
+        print("Salvato modello nuovo "+str(epoch))
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss':total_loss / len_TestImgLoader,
+        }, "./models/"+model_name+"_partial.pt")
+        best_loss=total_loss / len_TestImgLoader
         print("epoch " + str(epoch) + " loss_test: " + str(total_loss / len_TestImgLoader))
     # save the model
     print("saving the last model...")
@@ -252,7 +249,7 @@ def main():
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':total_loss / len_TestImgLoader,
-            }, "./models/model_05.pt")
+            }, "./models/"+model_name+".pt")
     print("model saved")
     # test model load
     # model = RegNet()

@@ -14,60 +14,14 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import wandb
 import torch.optim as optim
-# from main import test
+from main import test
 from tqdm import tqdm
 import copy
 import utils
 import cv2
 from PIL import Image
 
-def test(test_model, device, rgb_img, refl_img, target_transl, target_rot, velo_file, rgb_file, rescale_param=1.):
-    test_model.eval()
-    rgb = rgb_img.to(device)
-    lidar = refl_img.to(device)
-    target_transl_device = target_transl.to(device)
-    target_rot_device = target_rot.to(device)
 
-    # Run model disabling learning
-    with torch.no_grad():
-        transl_err, rot_err = test_model(rgb, lidar)
-
-    # Translation and rotation euclidean loss
-    # Sum errors computed with the input pose and check the distance with the target one
-    loss = nn.MSELoss(reduction='none')
-
-    # The following code is used to show the expected rotation vs the computed ones
-
-    rot_err_np = rot_err.cpu()
-    rot_err_np = rot_err_np.numpy()
-    rot_err_euler = R.from_euler('zyx', rot_err_np)
-    rot_err_euler = rot_err_euler.as_euler('zyx', degrees=True)
-    # print("rot err: ", rot_err_euler)
-    target_rot_euler = R.from_euler('zyx', target_rot)
-    target_rot_euler = target_rot_euler.as_euler('zyx', degrees=True)
-
-    transl_err_np = transl_err.cpu().numpy()
-
-    # print("rot target: ", target_rot_euler)
-
-    loss_transl_test = loss(transl_err, target_transl_device).sum(1).mean()
-
-    loss_rot_test = loss(rot_err, target_rot_device).sum(1).mean()
-
-    total_loss_test = torch.add(loss_transl_test, rescale_param * loss_rot_test)
-
-    # total_trasl_error = 0.0
-    # total_rot_error = 0.0
-    # for j in range(rgb.shape[0]):
-    #     total_trasl_error += torch.norm(target_transl[j] - transl_err[j]) * 100.
-    #     total_rot_error += utils.quaternion_distance(target_rot[j], rot_err[j])
-
-    # return total_loss.item(), total_trasl_error.item(), total_rot_error, rot_err
-    rot_test_comparator = [target_rot_euler, rot_err_euler]
-    tr_test_comparator = [transl_err_np, target_transl]
-
-    return total_loss_test.item(), loss_rot_test, loss_transl_test, rot_test_comparator, tr_test_comparator, \
-           velo_file, rgb_file, rot_err_euler, transl_err_np
 
 def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", complete_checkpoint=False,rescale_param=1.):
     print("begin test model_" + model_name_param)
@@ -128,11 +82,11 @@ def confront_decalib(dataset_decalib, predicted_decalib, accettable_range):
     confronter_total = []
     for i in dataset_decalib:
         z = abs(i[0]-predicted_decalib[c][0])
-        print("z: "+str(i[0])+" "+str(predicted_decalib[c][0]))
+        # print("z: "+str(i[0])+" "+str(predicted_decalib[c][0]))
         y = abs(i[1]-predicted_decalib[c][1])
-        print("y: "+str(i[1])+" "+str(predicted_decalib[c][1]))
+        # print("y: "+str(i[1])+" "+str(predicted_decalib[c][1]))
         x = abs(i[2]-predicted_decalib[c][2])
-        print("x: "+str(i[2])+" "+str(predicted_decalib[c][2]))
+        # print("x: "+str(i[2])+" "+str(predicted_decalib[c][2]))
         confronter = (z, y, x)
         if z > accettable_range or y > accettable_range or x > accettable_range:
             out_of_range.append(c)
