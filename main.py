@@ -106,7 +106,7 @@ def main():
     sequence_test = ["08", "09"]
     dataset_train = RegnetDataset(basedir, sequence_train)
     dataset_test = RegnetDataset(basedir, sequence_test)
-
+    model_name = "model_02"
     # sequence = ["00"]
     # Set the rando seed used for the permutations
     random.seed(1)
@@ -118,7 +118,7 @@ def main():
 
 
     wandb.init(project="thesis-project_train", entity="capra")
-    wandb.run.name = "model_5 Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
+    wandb.run.name = model_name+" Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
 
     dataset_train_size = len(dataset_train)
     print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
@@ -148,8 +148,8 @@ def main():
     # gpu +1
     device = torch.device("cuda:1")
 
-    print("carico il modello: model_10.pt")
-    checkpoint = torch.load("./models/model_10.pt", map_location='cuda:1')
+    print("carico il modello: model_05.pt")
+    checkpoint = torch.load("./models/model_05.pt", map_location='cuda:1')
     model = RegNet()
     model.load_state_dict(checkpoint["model_state_dict"])
     print("modello caricato.")
@@ -166,7 +166,7 @@ def main():
         "batch_size": batch_size,
         "sample_quantity": dataset_train_size
     }
-    model_name = "model_05_test"
+
     best_loss = 0
     total_loss = 0
     for epoch in range(0, epoch_number):

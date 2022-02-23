@@ -114,7 +114,7 @@ def main():
     # epoch = checkpoint['epoch']
     epoch = 200
     wandb.init(project="thesis-project_test", entity="capra")
-    wandb.run.name = "Test of model_20 NET - full std decal"
+    wandb.run.name = "Test of model_20_10_05 NET - full std decal"
     wandb.config = {
         # "batch_size": checkpoint["batch_size"],
         "batch_size": 32,
@@ -139,6 +139,7 @@ def main():
     model_name = "05"
     dataset_05  = copy.deepcopy(dataset_10)
     dataset_05.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+    checkpoint = torch.load("./models/model_05.pt", map_location='cuda:0')
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_05, device, checkpoint, model_name, True)
     confront, out_of_range = confront_decalib(dataset_05.rot_errors_euler, predicted_rot_decals, 2)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
