@@ -59,16 +59,16 @@ class RegnetDataset(Dataset):
             rot_error = [0, 0, 0]
             rot_error_euler = [0, 0, 0]
             tr_error = [0, 0, 0]
-            rot_error_euler[0] = random.randrange(-2, 2)
+            rot_error_euler[0] = random.randrange(-1, 1)
             rot_error[0] = radians(rot_error_euler[0])
-            rot_error_euler[1] = random.randrange(-2, 2)
+            rot_error_euler[1] = random.randrange(-1, 1)
             rot_error[1] = radians(rot_error_euler[1])
-            rot_error_euler[2] = random.randrange(-2, 2)
+            rot_error_euler[2] = random.randrange(-1, 1)
             rot_error[2] = radians(rot_error_euler[2])
 
-            tr_error[0] = random.randrange(-20, 20) / 100
-            tr_error[1] = random.randrange(-20, 20) / 100
-            tr_error[2] = random.randrange(-20, 20) / 100
+            tr_error[0] = random.randrange(-10, 10) / 100
+            tr_error[1] = random.randrange(-10, 10) / 100
+            tr_error[2] = random.randrange(-10, 10) / 100
             self.rot_errors.append(rot_error)
             self.rot_errors_euler.append(rot_error_euler)
             self.tr_errors.append(tr_error)

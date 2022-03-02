@@ -106,11 +106,10 @@ def main():
     sequence_test = ["08", "09"]
     dataset_train = RegnetDataset(basedir, sequence_train)
     dataset_test = RegnetDataset(basedir, sequence_test)
-    model_name = "model_02"
+    model_name = "model_01"
     # sequence = ["00"]
     # Set the rando seed used for the permutations
     random.seed(1)
-    epoch_number = 150
     learning_ratio = 0.00001
     batch_size = 32
     # rescale_param = 751.0
@@ -118,10 +117,7 @@ def main():
 
 
     wandb.init(project="thesis-project_train", entity="capra")
-    wandb.run.name = model_name+" Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
 
-    dataset_train_size = len(dataset_train)
-    print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
     # print(dataset.__getitem__(0))
     # imageTensor = dataset.__getitem__(0)["rgb"]
 
@@ -148,17 +144,23 @@ def main():
     # gpu +1
     device = torch.device("cuda:1")
 
-    print("carico il modello: model_05.pt")
-    checkpoint = torch.load("./models/model_05.pt", map_location='cuda:1')
+    print("carico il modello: model_01_partial.pt")
+    checkpoint = torch.load("./models/model_01_partial.pt", map_location='cuda:1')
+    epoch_checkpoint = checkpoint['epoch']
+    print("riparto dalla epoca: ",epoch_checkpoint)
     model = RegNet()
     model.load_state_dict(checkpoint["model_state_dict"])
     print("modello caricato.")
     model = model.to(device)
     # imageTensor2 = imageTensor[:, :1, :, :]
     parameters = filter(lambda p: p.requires_grad, model.parameters())
-
+    epoch_number = 200 - epoch_checkpoint
+    wandb.run.name = model_name+" Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
+    dataset_train_size = len(dataset_train)
+    print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
 
     optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     wandb.config = {
         "learning_rate": learning_ratio,
@@ -234,6 +236,12 @@ def main():
         #     best_loss = total_loss / len_TestImgLoader
         # if total_loss / len_TestImgLoader < best_loss:
         print("Salvato modello nuovo "+str(epoch))
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss':total_loss / len_TestImgLoader,
+        }, "/home/capra/tesi/models/"+model_name+"_partial.pt")
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),

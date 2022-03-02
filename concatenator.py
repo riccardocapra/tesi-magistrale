@@ -96,7 +96,7 @@ def confront_decalib(dataset_decalib, predicted_decalib, accettable_range):
     return confronter_total, out_of_range
 
 def main():
-    print("main")
+    print("main:")
 
     device = torch.device('cuda:0')
     basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
@@ -114,7 +114,7 @@ def main():
     # epoch = checkpoint['epoch']
     epoch = 200
     wandb.init(project="thesis-project_test", entity="capra")
-    wandb.run.name = "Test of model_20_10_05 NET - full std decal"
+    wandb.run.name = "Test of model_20_10_05_02_01 NET - full std decal"
     wandb.config = {
         # "batch_size": checkpoint["batch_size"],
         "batch_size": 32,
@@ -149,6 +149,7 @@ def main():
     model_name = "02"
     dataset_02  = copy.deepcopy(dataset_05)
     dataset_02.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
+    checkpoint = torch.load("./models/model_02.pt", map_location='cuda:0')
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_02, device, checkpoint, model_name, True)
     confront, out_of_range = confront_decalib(dataset_02.rot_errors_euler, predicted_rot_decals, 1)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
