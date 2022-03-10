@@ -106,22 +106,20 @@ def main():
     sequence_test = ["08", "09"]
     dataset_train = RegnetDataset(basedir, sequence_train)
     dataset_test = RegnetDataset(basedir, sequence_test)
-    model_name = "model_01"
+    model_name = "model_01_refined_new_rescaled"
     # sequence = ["00"]
     # Set the rando seed used for the permutations
     random.seed(1)
     learning_ratio = 0.00001
-    batch_size = 32
-    # rescale_param = 751.0
-    rescale_param = 1.
-
+    batch_size = 64
+    rescale_param = 751.0
 
     wandb.init(project="thesis-project_train", entity="capra")
 
     # print(dataset.__getitem__(0))
     # imageTensor = dataset.__getitem__(0)["rgb"]
 
-    validation_split = 0
+    # validation_split = 0
     # training_split = .8
 
     TrainImgLoader = torch.utils.data.DataLoader(dataset=dataset_train,
@@ -144,23 +142,23 @@ def main():
     # gpu +1
     device = torch.device("cuda:1")
 
-    print("carico il modello: model_01_partial.pt")
-    checkpoint = torch.load("./models/model_01_partial.pt", map_location='cuda:1')
-    epoch_checkpoint = checkpoint['epoch']
-    print("riparto dalla epoca: ",epoch_checkpoint)
+    print("nuovo modello: "+model_name)
+    # checkpoint = torch.load("./models/model_01.pt", map_location='cuda:1')
+    # epoch_checkpoint = checkpoint['epoch']
+    # print("riparto dalla epoca: ",epoch_checkpoint)
     model = RegNet()
-    model.load_state_dict(checkpoint["model_state_dict"])
-    print("modello caricato.")
+    # model.load_state_dict(checkpoint["model_state_dict"])
+    # print("modello caricato.")
     model = model.to(device)
     # imageTensor2 = imageTensor[:, :1, :, :]
     parameters = filter(lambda p: p.requires_grad, model.parameters())
-    epoch_number = 200 - epoch_checkpoint
+    epoch_number = 200
     wandb.run.name = model_name+" Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
     dataset_train_size = len(dataset_train)
     print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
 
     optimizer = optim.Adam(parameters, lr=learning_ratio, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     wandb.config = {
         "learning_rate": learning_ratio,
@@ -182,7 +180,7 @@ def main():
 
         c = 0
         for batch_idx, sample in enumerate(TrainImgLoader):
-            loss_train = train(model, device, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'])
+            loss_train = train(model, device, optimizer, sample['rgb'], sample['lidar'], sample['tr_error'], sample['rot_error'], rescale_param)
             total_loss+= loss_train
             # local_loss_train = total_iter+loss_train
             c = c+1

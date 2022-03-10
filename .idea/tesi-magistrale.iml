@@ -3,6 +3,7 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/models" />
+      <excludeFolder url="file://$MODULE_DIR$/wandb" />
     </content>
     <orderEntry type="jdk" jdkName="Remote Python 3.9.7 (sftp://capra@149.132.176.95:22/home/capra/.conda/envs/capra-tesi/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -55,20 +55,31 @@ class RegnetDataset(Dataset):
         # self.pose_type = pose_type
         # self.transform = transform
     def initialize_decalibrations(self):
+        #Mi sono accorto che le decalibrazioni cosi in effetti contano solo degli interi, si dovrebbero raffinare (?).
+        #includendo più decalibrazioni intermedie facendo ad esempio:
+        #rot_error_euler[0] = random.randrange(-200, 200) / 10
+        #per avere una risoluzione di 0.1° perchè ora la risoluzione è 1° e 15 cm per le tr del model_20
+        #Per correggere si possono ri-addestrare i modelli con decalibrazioni intermedie.
+        # Volendo mantenere 1° di risoluzione per model_20 e model_10 bisognerebbe fare
+        # model_05: random.randrange(-20, 20)/4  = .5° res
+        # model_02: random.randrange(-20, 20)/10 = .2° res
+        # model_01: random.randrange(-20, 20)/20 = .1° res
+        # per mantenere lo stesso spazio di model_20
+
         for idx in range(self.length):
             rot_error = [0, 0, 0]
             rot_error_euler = [0, 0, 0]
             tr_error = [0, 0, 0]
-            rot_error_euler[0] = random.randrange(-1, 1)
+            rot_error_euler[0] = random.randrange(0, 20) * random.choice((-1, 1))
             rot_error[0] = radians(rot_error_euler[0])
-            rot_error_euler[1] = random.randrange(-1, 1)
+            rot_error_euler[1] = random.randrange(0, 20) * random.choice((-1, 1))
             rot_error[1] = radians(rot_error_euler[1])
-            rot_error_euler[2] = random.randrange(-1, 1)
+            rot_error_euler[2] = random.randrange(0, 20) * random.choice((-1, 1))
             rot_error[2] = radians(rot_error_euler[2])
 
-            tr_error[0] = random.randrange(-10, 10) / 100
-            tr_error[1] = random.randrange(-10, 10) / 100
-            tr_error[2] = random.randrange(-10, 10) / 100
+            tr_error[0] = random.randrange(0, 150) / 100 * random.choice((-1, 1))
+            tr_error[1] = random.randrange(0, 150) / 100 * random.choice((-1, 1))
+            tr_error[2] = random.randrange(0, 150) / 100 * random.choice((-1, 1))
             self.rot_errors.append(rot_error)
             self.rot_errors_euler.append(rot_error_euler)
             self.tr_errors.append(tr_error)
@@ -78,7 +89,7 @@ class RegnetDataset(Dataset):
         self.rot_errors = rot_error_input
 
 
-    def correct_decalibrations(self,rot_error_input ,tr_error_input):
+    def correct_decalibrations(self, rot_error_input, tr_error_input):
         # rot error arriva in gradi.
         c=0
         for i in self.tr_errors:
