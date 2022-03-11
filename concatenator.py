@@ -92,7 +92,7 @@ def confront_decalib(dataset_decalib, predicted_decalib, accettable_range):
 
     return confronter_total, out_of_range
 
-def plot_res(confront, model_name, accettable_range, type="rot"):
+def plot_rot_res(confront, model_name, accettable_range, type="rot"):
     mean = []
     confront = np.array(confront).T
     plt.hist(confront[0], density=False, bins=200)  # density=False would make counts
@@ -115,11 +115,28 @@ def plot_res(confront, model_name, accettable_range, type="rot"):
     mean.append(np.mean(confront[2]))
     return mean
 
-def plot_errorbars(correct, predicted, model_name):
-    plt.errorbar(correct, predicted, linestyle='None', marker='^')
-    plt.xlabel(model_name + ' Z rot errors')
-    plt.savefig('./error_plots/' + model_name + '_Z_rot_error.png')
+def plot_tr_res(confront, model_name, accettable_range, type="tr"):
+    mean = []
+    confront = np.array(confront).T
+    plt.hist(confront[0], density=False, bins=200)  # density=False would make counts
+    plt.axvline(x=accettable_range, color='r')
+    plt.xlabel(model_name + ' X '+type+' errors')
+    plt.savefig('./plots/' + model_name + '_X_'+type+'_error.png')
     plt.close()
+    mean.append(np.mean(confront[0]))
+    plt.hist(confront[1], density=False, bins=200)  # density=False would make counts
+    plt.axvline(x=accettable_range, color='r')
+    plt.xlabel(model_name+' Y '+type+' errors')
+    plt.savefig('./plots/'+model_name+'_Y_'+type+'_error.png')
+    plt.close()
+    mean.append(np.mean(confront[1]))
+    plt.hist(confront[2], density=False, bins=200)  # density=False would make counts
+    plt.axvline(x=accettable_range, color='r')
+    plt.xlabel(model_name+' Z '+type+' errors')
+    plt.savefig('./plots/'+model_name+'_Z_'+type+'_error.png')
+    plt.close()
+    mean.append(np.mean(confront[2]))
+    return mean
 
 def main():
     print("main:")
@@ -127,36 +144,32 @@ def main():
     device = torch.device('cuda:0')
     basedir = '/media/RAIDONE/DATASETS/KITTI/ODOMETRY/'
     # h, w = 352, 1216
-    rescale_param = 1.
+    # rescale_param = 1.
     sequence = ["08"]
     model_name="20"
+
     dataset_20 = RegnetDataset(basedir, sequence)
     dataset_size = len(dataset_20)
-
-    # utils.data_formatter_pcl_single(dataset_20, dataset_20.velo_files, dataset_20)
-    # cv2.imwrite('./images/'+model_name+'_decalibration.jpeg', depth_image_p)
-
     checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
     # epoch = checkpoint['epoch']
-    epoch = 200
+    # epoch = 200
     wandb.init(project="thesis-project_test", entity="capra")
-    wandb.run.name = "concatenation complete"
+    wandb.run.name = "iteration complete"
     wandb.config = {
         # "batch_size": checkpoint["batch_size"],
         "batch_size": 32,
         "sample_quantity": dataset_size
     }
-
     rot_error_means = []
     tr_error_means = []
-
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_20.rot_errors_euler, predicted_rot_decals, 10)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_res(confront,model_name,10)
+    mean = plot_rot_res(confront,model_name,10)
     rot_error_means.append(mean)
     confront, out_of_range = confront_decalib(dataset_20.tr_errors, predicted_tr_decals, 1)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
+    mean = plot_tr_res(confront, model_name, 1, "tr")
     tr_error_means.append(mean)
 
 
@@ -166,14 +179,16 @@ def main():
     dataset_10  = copy.deepcopy(dataset_20)
     dataset_10.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
     checkpoint = torch.load("./models/model_10.pt", map_location='cuda:0')
-    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_10, device, checkpoint, model_name, True)
+    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
+    # predicted_rot_decals, predicted_tr_decals = test_model(dataset_10, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_10.rot_errors_euler, predicted_rot_decals, 5)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_res(confront,model_name,5)
+    mean = plot_rot_res(confront,model_name,5)
     rot_error_means.append(mean)
     confront, out_of_range = confront_decalib(dataset_10.tr_errors, predicted_tr_decals, 0.5)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
+    mean = plot_tr_res(confront, model_name, 0.5, "tr")
     tr_error_means.append(mean)
     #INIZIO MODELLO 05#
 
@@ -181,14 +196,16 @@ def main():
     dataset_05  = copy.deepcopy(dataset_10)
     dataset_05.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
     checkpoint = torch.load("./models/model_05.pt", map_location='cuda:0')
-    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_05, device, checkpoint, model_name, True)
+    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
+    # predicted_rot_decals, predicted_tr_decals = test_model(dataset_05, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_05.rot_errors_euler, predicted_rot_decals, 2)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_res(confront,model_name,2)
+    mean = plot_rot_res(confront,model_name,2)
     rot_error_means.append(mean)
     confront, out_of_range = confront_decalib(dataset_05.tr_errors, predicted_tr_decals, 0.2)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
+    mean = plot_tr_res(confront, model_name, 0.2, "tr")
     tr_error_means.append(mean)
 
     #INIZIO MODELLO 02#
@@ -197,14 +214,16 @@ def main():
     dataset_02  = copy.deepcopy(dataset_05)
     dataset_02.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
     checkpoint = torch.load("./models/model_02.pt", map_location='cuda:0')
-    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_02, device, checkpoint, model_name, True)
+    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
+    # predicted_rot_decals, predicted_tr_decals = test_model(dataset_02, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_02.rot_errors_euler, predicted_rot_decals, 1)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_res(confront,model_name,1)
+    mean = plot_rot_res(confront,model_name,1)
     rot_error_means.append(mean)
     confront, out_of_range = confront_decalib(dataset_02.tr_errors, predicted_tr_decals, 0.1)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
+    mean = plot_tr_res(confront, model_name, 0.1, "tr")
     tr_error_means.append(mean)
 
 
@@ -214,19 +233,43 @@ def main():
     dataset_01  = copy.deepcopy(dataset_02)
     dataset_01.correct_decalibrations(predicted_rot_decals,predicted_tr_decals)
     checkpoint = torch.load("./models/model_01.pt", map_location='cuda:0')
-    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_01, device, checkpoint, model_name,True)
+    # checkpoint = torch.load("./models/model_200-epochs_V4.pt", map_location='cuda:0')
+    # predicted_rot_decals, predicted_tr_decals = test_model(dataset_01, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_01.rot_errors_euler, predicted_rot_decals, 0.5)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_res(confront, model_name,0.5)
+    mean = plot_rot_res(confront, model_name, 0.5)
     rot_error_means.append(mean)
     confront, out_of_range = confront_decalib(dataset_01.tr_errors, predicted_tr_decals, 0.05)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
+    mean = plot_tr_res(confront, model_name, 0.1, "tr")
     tr_error_means.append(mean)
 
     # creare un loop che cicla le dacal predette e tira fuori delle matrici
 
     print(rot_error_means)
+    x = [1, 2, 3, 4, 5]
+    plt_arr = np.array(rot_error_means).T
+    plt.plot(x, plt_arr[0], 'blue', label="Z mean error")
+    plt.plot(x, plt_arr[1], 'green', label="Y mean error")
+    plt.plot(x, plt_arr[2], 'red', label="X mean error")
+    plt.xlabel(' rot. error mean')
+    plt.legend(loc="upper right")
+    plt.savefig('./plots/rot error mean.png')
+    plt.close()
+
+    print("---")
+    print(tr_error_means)
+    plt_arr = np.array(tr_error_means).T
+    plt.plot(x, plt_arr[0], 'red', label="X mean error")
+    plt.plot(x, plt_arr[1], 'green', label="Y mean error")
+    plt.plot(x, plt_arr[2], 'blue', label="Z mean error")
+    plt.legend(loc="upper right")
+    plt.xlabel(' tr. error mean')
+    plt.savefig('./plots/tr error mean.png')
+    plt.close()
+
+    # dataset_01.correct_decalibrations(predicted_rot_decals, predicted_tr_decals)
 
     print("end CONCAT")
 

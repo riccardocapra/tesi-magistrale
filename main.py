@@ -106,7 +106,7 @@ def main():
     sequence_test = ["08", "09"]
     dataset_train = RegnetDataset(basedir, sequence_train)
     dataset_test = RegnetDataset(basedir, sequence_test)
-    model_name = "model_01_refined_new_rescaled"
+    model_name = "model_01_retrained"
     # sequence = ["00"]
     # Set the rando seed used for the permutations
     random.seed(1)
@@ -143,16 +143,16 @@ def main():
     device = torch.device("cuda:1")
 
     print("nuovo modello: "+model_name)
-    # checkpoint = torch.load("./models/model_01.pt", map_location='cuda:1')
-    # epoch_checkpoint = checkpoint['epoch']
-    # print("riparto dalla epoca: ",epoch_checkpoint)
+    checkpoint = torch.load("./models/model_02.pt", map_location='cuda:1')
+    epoch_checkpoint = checkpoint['epoch']
+    print("riparto dalla epoca: ",epoch_checkpoint)
     model = RegNet()
-    # model.load_state_dict(checkpoint["model_state_dict"])
+    model.load_state_dict(checkpoint["model_state_dict"])
     # print("modello caricato.")
     model = model.to(device)
     # imageTensor2 = imageTensor[:, :1, :, :]
     parameters = filter(lambda p: p.requires_grad, model.parameters())
-    epoch_number = 200
+    epoch_number = 200 
     wandb.run.name = model_name+" Train run "+str(epoch_number)+" epochs "+str(batch_size)+" batch size"
     dataset_train_size = len(dataset_train)
     print("Saranno considerate per il training ", dataset_train_size, " coppie pcl-immgine. Le epoche sono: ",epoch_number)
