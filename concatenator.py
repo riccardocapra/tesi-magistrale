@@ -21,6 +21,7 @@ import utils
 import cv2
 from PIL import Image
 import matplotlib.pyplot as plt
+import statistics
 
 
 def test_model(dataset, device, checkpoint_model, model_name_param="unnamed", complete_checkpoint=False, rescale_param=1.):
@@ -94,6 +95,7 @@ def confront_decalib(dataset_decalib, predicted_decalib, accettable_range):
 
 def plot_rot_res(confront, model_name, accettable_range, type="rot"):
     mean = []
+    median = []
     confront = np.array(confront).T
     plt.hist(confront[0], density=False, bins=200)  # density=False would make counts
     plt.axvline(x=accettable_range, color='r')
@@ -101,22 +103,26 @@ def plot_rot_res(confront, model_name, accettable_range, type="rot"):
     plt.savefig('./plots/' + model_name + '_Z_'+type+'_error.png')
     plt.close()
     mean.append(np.mean(confront[0]))
+    median.append(statistics.median(confront[0]))
     plt.hist(confront[1], density=False, bins=200)  # density=False would make counts
     plt.axvline(x=accettable_range, color='r')
     plt.xlabel(model_name+' Y '+type+' errors')
     plt.savefig('./plots/'+model_name+'_Y_'+type+'_error.png')
     plt.close()
     mean.append(np.mean(confront[1]))
+    median.append(statistics.median(confront[1]))
     plt.hist(confront[2], density=False, bins=200)  # density=False would make counts
     plt.axvline(x=accettable_range, color='r')
     plt.xlabel(model_name+' X '+type+' errors')
     plt.savefig('./plots/'+model_name+'_X_'+type+'_error.png')
     plt.close()
     mean.append(np.mean(confront[2]))
-    return mean
+    median.append(statistics.median(confront[2]))
+    return mean, median
 
 def plot_tr_res(confront, model_name, accettable_range, type="tr"):
     mean = []
+    median = []
     confront = np.array(confront).T
     plt.hist(confront[0], density=False, bins=200)  # density=False would make counts
     plt.axvline(x=accettable_range, color='r')
@@ -124,19 +130,22 @@ def plot_tr_res(confront, model_name, accettable_range, type="tr"):
     plt.savefig('./plots/' + model_name + '_X_'+type+'_error.png')
     plt.close()
     mean.append(np.mean(confront[0]))
+    median.append(statistics.median(confront[0]))
     plt.hist(confront[1], density=False, bins=200)  # density=False would make counts
     plt.axvline(x=accettable_range, color='r')
     plt.xlabel(model_name+' Y '+type+' errors')
     plt.savefig('./plots/'+model_name+'_Y_'+type+'_error.png')
     plt.close()
     mean.append(np.mean(confront[1]))
+    median.append(statistics.median(confront[1]))
     plt.hist(confront[2], density=False, bins=200)  # density=False would make counts
     plt.axvline(x=accettable_range, color='r')
     plt.xlabel(model_name+' Z '+type+' errors')
     plt.savefig('./plots/'+model_name+'_Z_'+type+'_error.png')
     plt.close()
     mean.append(np.mean(confront[2]))
-    return mean
+    median.append(statistics.median(confront[2]))
+    return mean, median
 
 def main():
     print("main:")
@@ -154,23 +163,27 @@ def main():
     # epoch = checkpoint['epoch']
     # epoch = 200
     wandb.init(project="thesis-project_test", entity="capra")
-    wandb.run.name = "iteration complete"
+    wandb.run.name = "concatenation high"
     wandb.config = {
         # "batch_size": checkpoint["batch_size"],
         "batch_size": 32,
         "sample_quantity": dataset_size
     }
     rot_error_means = []
+    rot_error_median = []
     tr_error_means = []
+    tr_error_median = []
     predicted_rot_decals,predicted_tr_decals = test_model(dataset_20, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_20.rot_errors_euler, predicted_rot_decals, 10)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_rot_res(confront,model_name,10)
+    mean, median = plot_rot_res(confront,model_name,10)
     rot_error_means.append(mean)
+    rot_error_median.append(median)
     confront, out_of_range = confront_decalib(dataset_20.tr_errors, predicted_tr_decals, 1)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
-    mean = plot_tr_res(confront, model_name, 1, "tr")
+    mean, median = plot_tr_res(confront, model_name, 1, "tr")
     tr_error_means.append(mean)
+    tr_error_median.append(median)
 
 
     #INIZIO MODELLO 10#
@@ -184,12 +197,14 @@ def main():
     # predicted_rot_decals, predicted_tr_decals = test_model(dataset_10, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_10.rot_errors_euler, predicted_rot_decals, 5)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_rot_res(confront,model_name,5)
+    mean, median = plot_rot_res(confront,model_name,5)
     rot_error_means.append(mean)
+    rot_error_median.append(median)
     confront, out_of_range = confront_decalib(dataset_10.tr_errors, predicted_tr_decals, 0.5)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
-    mean = plot_tr_res(confront, model_name, 0.5, "tr")
+    mean, median = plot_tr_res(confront, model_name, 0.5, "tr")
     tr_error_means.append(mean)
+    tr_error_median.append(median)
     #INIZIO MODELLO 05#
 
     model_name = "05"
@@ -201,12 +216,14 @@ def main():
     # predicted_rot_decals, predicted_tr_decals = test_model(dataset_05, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_05.rot_errors_euler, predicted_rot_decals, 2)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_rot_res(confront,model_name,2)
+    mean, median = plot_rot_res(confront,model_name,2)
     rot_error_means.append(mean)
+    rot_error_median.append(median)
     confront, out_of_range = confront_decalib(dataset_05.tr_errors, predicted_tr_decals, 0.2)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
-    mean = plot_tr_res(confront, model_name, 0.2, "tr")
+    mean, median = plot_tr_res(confront, model_name, 0.2, "tr")
     tr_error_means.append(mean)
+    tr_error_median.append(median)
 
     #INIZIO MODELLO 02#
 
@@ -219,12 +236,14 @@ def main():
     # predicted_rot_decals, predicted_tr_decals = test_model(dataset_02, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_02.rot_errors_euler, predicted_rot_decals, 1)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_rot_res(confront,model_name,1)
+    mean, median = plot_rot_res(confront,model_name,1)
     rot_error_means.append(mean)
+    rot_error_median.append(median)
     confront, out_of_range = confront_decalib(dataset_02.tr_errors, predicted_tr_decals, 0.1)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
-    mean = plot_tr_res(confront, model_name, 0.1, "tr")
+    mean, median = plot_tr_res(confront, model_name, 0.1, "tr")
     tr_error_means.append(mean)
+    tr_error_median.append(median)
 
 
     #INIZIO MODELLO 01#
@@ -238,35 +257,60 @@ def main():
     # predicted_rot_decals, predicted_tr_decals = test_model(dataset_01, device, checkpoint, model_name)
     confront, out_of_range = confront_decalib(dataset_01.rot_errors_euler, predicted_rot_decals, 0.5)
     print("Su "+str(dataset_size)+" elementi ci sono: "+str(len(out_of_range))+" O.O.R. per le rotazioni")
-    mean = plot_rot_res(confront, model_name, 0.5)
+    mean, median = plot_rot_res(confront, model_name, 0.5)
     rot_error_means.append(mean)
+    rot_error_median.append(median)
     confront, out_of_range = confront_decalib(dataset_01.tr_errors, predicted_tr_decals, 0.05)
     print("Su " + str(dataset_size) + " elementi ci sono: " + str(len(out_of_range)) + " O.O.R. per le traslazioni")
-    mean = plot_tr_res(confront, model_name, 0.1, "tr")
+    mean, median = plot_tr_res(confront, model_name, 0.05, "tr")
     tr_error_means.append(mean)
+    tr_error_median.append(median)
 
     # creare un loop che cicla le dacal predette e tira fuori delle matrici
 
     print(rot_error_means)
+    print("---")
+    print(tr_error_means)
+    print("---")
+    print(rot_error_median)
+    print("---")
+    print(tr_error_median)
+
     x = [1, 2, 3, 4, 5]
     plt_arr = np.array(rot_error_means).T
     plt.plot(x, plt_arr[0], 'blue', label="Z mean error")
     plt.plot(x, plt_arr[1], 'green', label="Y mean error")
     plt.plot(x, plt_arr[2], 'red', label="X mean error")
-    plt.xlabel(' rot. error mean')
+    plt.xlabel('rot. error mean')
     plt.legend(loc="upper right")
     plt.savefig('./plots/rot error mean.png')
     plt.close()
 
-    print("---")
-    print(tr_error_means)
     plt_arr = np.array(tr_error_means).T
     plt.plot(x, plt_arr[0], 'red', label="X mean error")
     plt.plot(x, plt_arr[1], 'green', label="Y mean error")
     plt.plot(x, plt_arr[2], 'blue', label="Z mean error")
     plt.legend(loc="upper right")
-    plt.xlabel(' tr. error mean')
+    plt.xlabel('tr. error mean')
     plt.savefig('./plots/tr error mean.png')
+    plt.close()
+
+    plt_arr = np.array(rot_error_median).T
+    plt.plot(x, plt_arr[0], 'red', label="Z median error")
+    plt.plot(x, plt_arr[1], 'green', label="Y median error")
+    plt.plot(x, plt_arr[2], 'blue', label="X median error")
+    plt.legend(loc="upper right")
+    plt.xlabel('rot. error median')
+    plt.savefig('./plots/rot error median.png')
+    plt.close()
+
+    plt_arr = np.array(tr_error_median).T
+    plt.plot(x, plt_arr[0], 'red', label="X median error")
+    plt.plot(x, plt_arr[1], 'green', label="Y median error")
+    plt.plot(x, plt_arr[2], 'blue', label="Z median error")
+    plt.legend(loc="upper right")
+    plt.xlabel('tr. error median')
+    plt.savefig('./plots/tr error median.png')
     plt.close()
 
     # dataset_01.correct_decalibrations(predicted_rot_decals, predicted_tr_decals)

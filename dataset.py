@@ -70,11 +70,11 @@ class RegnetDataset(Dataset):
             rot_error = [0, 0, 0]
             rot_error_euler = [0, 0, 0]
             tr_error = [0, 0, 0]
-            rot_error_euler[0] = random.randrange(10, 20)* random.choice((-1, 1))
+            rot_error_euler[0] = random.randrange(15, 20)* random.choice((-1, 1))
             rot_error[0] = radians(rot_error_euler[0])
-            rot_error_euler[1] = random.randrange(10, 20)* random.choice((-1, 1))
+            rot_error_euler[1] = random.randrange(15, 20)* random.choice((-1, 1))
             rot_error[1] = radians(rot_error_euler[1])
-            rot_error_euler[2] = random.randrange(10, 20)* random.choice((-1, 1))
+            rot_error_euler[2] = random.randrange(15, 20)* random.choice((-1, 1))
             rot_error[2] = radians(rot_error_euler[2])
 
             tr_error[0] = random.randrange(100, 150) / 100 * random.choice((-1, 1))
