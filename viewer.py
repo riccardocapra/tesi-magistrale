@@ -27,24 +27,48 @@ def main():
 
     rot = dataset_model.rot_errors
     tr = dataset_model.tr_errors
+    rot[0] = [math.radians(0), math.radians(0), math.radians(0)]
+    tr[0]=[0,0,0]
+    # utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "corretta", True)
+    #
+    # rot[0] = [math.radians(18),math.radians(18),math.radians(18)]
+    #
+    # dataset_model.set_decalibrations(rot, tr)
+    # #mostra la decalibrazione originale
+    # utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "20_decal", True)
+    # # set test
+    # rot[0] = [math.radians(10), math.radians(10), math.radians(10)]
+    # dataset_model.set_decalibrations(rot, tr)
+    # # mostra la decalibrazione impostata
+    # utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "10_decal", True)
+    # #correct test
+    # # rot = np.zeros((len(dataset_model), 3))
+    # # tr = np.zeros((len(dataset_model), 3))
+    # rot[0] = [math.radians(5), math.radians(5), math.radians(5)]
+    # dataset_model.set_decalibrations(rot, tr)
+    # # mostra la decalibrazione impostata corretta
+    # utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "05_decal", True)
+    #
+    # rot[0] = [math.radians(2), math.radians(2), math.radians(2)]
+    # dataset_model.set_decalibrations(rot, tr)
+    # # mostra la decalibrazione impostata corretta
+    # utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "02_decal", True)
+    #
+    # rot[0] = [math.radians(1), math.radians(1), math.radians(1)]
+    # dataset_model.set_decalibrations(rot, tr)
+    # # mostra la decalibrazione impostata corretta
+    # utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "01_decal", True)
 
-    rot[0] = [math.radians(20),math.radians(0),math.radians(0)]
-
+    rot[0] = [math.radians(0.15), math.radians(0.7), math.radians(0.05)]
+    tr[0]=[0.028,0.018,0.015]
     dataset_model.set_decalibrations(rot, tr)
-    #mostra la decalibrazione originale
-    utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, model_name, True)
-    # set test
-    rot[0] = [math.radians(10), math.radians(0), math.radians(0)]
-    dataset_model.set_decalibrations(rot, tr)
-    # mostra la decalibrazione impostata
-    utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "decal", True)
-    #correct test
-    rot = np.zeros((len(dataset_model), 3))
-    tr = np.zeros((len(dataset_model), 3))
-    rot[0] = [math.radians(10), math.radians(0), math.radians(0)]
-    dataset_model.correct_decalibrations(rot, tr)
     # mostra la decalibrazione impostata corretta
-    utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "correct", True)
+    utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "005_decal", True)
+
+    # rot[0] = [math.radians(0), math.radians(0), math.radians(0)]
+    # dataset_model.set_decalibrations(rot, tr)
+    # # mostra la decalibrazione impostata corretta
+    # utils.show_couple(dataset_model[0], dataset_model.datasets["08"].calib.K_cam2, h, w, "corretta", True)
 
 
     # print("---- VELO_IMAGE "+str(idx)+" FORMATTING BEGUN ---")
